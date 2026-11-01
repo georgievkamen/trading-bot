@@ -1,119 +1,199 @@
-from __future__ import annotations
+YªçŠx¬uç%j·Â+ar‰ì¶ë•ë_¢ºŞjË"‚v›•ëÚ®&›•ëœ›ÛH×Ù]\™W×È[\Ü[››İ][ÛœÂ‚š[\ÜœÛÛ‚™œ›ÛH]][YH[\Ü]][YK[Y^›Û™B™œ›ÛHœÙ\™\ˆ[\Ü˜\ÙR™\]Y\İ[™\‹™XY[™ÒÙ\™\‚™œ›ÛH]Xˆ[\Ü]™œ›ÛH\[™È[\Ü[B™œ›ÛH\›X‹œ\œÙH[\Ü\›Ü]‚™œ›ÛHœ\\ˆ[\ÜTT—ÔÕUQÖWÓSQTË\\—Üİ[[X\B™œ›ÛHœİÜ˜YÙH[\ÜX\šÙ]İÜ™B‚‚”QÑHHˆˆˆYØİ\H[‚[[™ÏH™[ˆ‚XY‚Y]HÚ\œÙ]H]‹NY]H˜[YOHšY]ÜÜˆÛÛ[HÚYY]šXÙK]ÚY[š]X[\ØØ[OLH‚]O“X\šÙ]™\ÙX\˜Ú0­È\\ˆXİ]O‚İ[O‚œ›ÛİØÛÛÜ‹\ØÚ[YN™\šÎËKX™ÎˆÌLLËK\[™[ˆÌLLNŒNËK\[™[ˆÌMLYŒ˜NËK[[™NˆÌŒÌÌÙËK]^ˆÙXÙŒYÎËK[]]YˆÎXXXNËKYÜ™Y[ˆÍÙ˜LËK\™YˆÙ™ÌÎÎËKYÛÛˆÙNÍÍËKX›YNˆÎN™ËKXŞX[ˆÍÌÙ™LßBŠØ›Ş\Ú^š[™Î˜›Ü™\‹X›ŞX›Ù^ÛX\™Ú[ŒØ˜XÚÙÜ›İ[™œ˜YX[YÜ˜YY[
+[\ÙH]Ì	HLŒ	KÌXL˜LÍˆ	K˜\ŠKX™ÊH	JNØÛÛÜ˜\ŠK]^
+NÙ›ÛŒMÌKHÙYÛÙHRK[\‹Ş\İ[K]ZKØ[œË\Ù\šYÛZ[‹ZZYÚŒLšB‹Ü˜\ÛX^]ÚYŒMÛX\™Ú[˜]]ÎÜY[™ÎŒÌœŒKÜÙ\Ü^N™›^Ú\İYKXÛÛ[œÜXÙKX™]ÙY[Ø[YÛ‹Z][\Î˜Ù[\ÛX\™Ú[‹X›İÛNŒÌK˜œ˜[™Ù\Ü^N™›^ÙØ\ŒMØ[YÛ‹Z][\Î˜Ù[\ŸK›ÙÛŞİÚYœÚZYÚœØ›Ü™\‹\˜Y]\ÎŒLÜØ˜XÚÙÜ›İ[™›[™X\‹YÜ˜YY[
+MYYËÍÙL˜ŒKÌYÌÊNÙ\Ü^N™ÜšYÜXÙKZ][\Î˜Ù[\ØÛÛÜˆÌŒLÌNÙ›Û]ÙZYÚLÙ›Û\Ú^™NŒN\Ø›Ş\ÚYİÎŒœœÌ™˜ÌÎMÍ_K™^YXœ›İŞÙ›Û\Ú^™NŒL\Û]\‹\ÜXÚ[™Î‹ŒM™[Nİ^]˜[œÙ›Ü›N\\˜Ø\ÙNØÛÛÜ˜\ŠKYÜ™Y[ŠNÙ›Û]ÙZYÚÌK]^Ù›Û\Ú^™NŒŒÜÙ›Û]ÙZYÚÌÛ]\‹\ÜXÚ[™Î‹KŒÙ[_KœİXØÛÛÜ˜\ŠK[]]Y
+NÙ›Û\Ú^™NŒLœÛX\™Ú[‹]ÜŒœKœİ]\ŞÙ\Ü^N™›^Ø[YÛ‹Z][\Î˜Ù[\ÙØ\\ØÛÛÜˆØÍYØ˜XÚÙÜ›İ[™ˆÌLLXLŒÎØ›Ü™\Œ\ÛÛY˜\ŠK[[™JNÜY[™Î\LÜØ›Ü™\‹\˜Y]\ÎNN\Ù›Û\Ú^™NŒLœK™İÚZYÚİÚYØ›Ü™\‹\˜Y]\ÎL	NØ˜XÚÙÜ›İ[™˜\ŠKYÜ™Y[ŠNØ›Ş\ÚYİÎŒMÍÙ˜LK™İØ\›Ø˜XÚÙÜ›İ[™˜\ŠKYÛÛ
+NØ›Ş\ÚYİÎŒMÙNÍÍB‹™ÜšYÙ\Ü^N™ÜšYÙØ\ŒMK›Y]šXÜŞÙÜšY][\]KXÛÛ[[œÎœ™\X]
+Z[›X^
+YœŠJNÛX\™Ú[‹X›İÛNŒMœK˜Ø\™Ø˜XÚÙÜ›İ[™›[™X\‹YÜ˜YY[
+MYYËÌLÌXÌ™Q‹ÌLMÌŒYŠNØ›Ü™\Œ\ÛÛY˜\ŠK[[™JNØ›Ü™\‹\˜Y]\ÎŒMœÜY[™ÎŒNØ›Ş\ÚYİÎŒMÌŸK›Y]šXÈ›X™[ØÛÛÜ˜\ŠK[]]Y
+NÙ›Û\Ú^™NŒLœK›Y]šXÈ˜[Y^Ù›Û\Ú^™NŒÜÙ›Û]ÙZYÚÌÛ]\‹\ÜXÚ[™Î‹KŒ[NÛX\™Ú[‹]ÜÙ›Û]˜\šX[[[Y\šXÎX[\‹[[\ßK›Y]šXÈš[ØÛÛÜ˜\ŠK[]]Y
+NÙ›Û\Ú^™NŒL\ÛX\™Ú[‹]ÜKœÜŞØÛÛÜ˜\ŠKYÜ™Y[ŠHZ[\Ü[K›™YŞØÛÛÜ˜\ŠK\™Y
+HZ[\Ü[B‹œÙXİ[Û‹ZXYÙ\Ü^N™›^Ú\İYKXÛÛ[œÜXÙKX™]ÙY[Ø[YÛ‹Z][\Î™[™ÛX\™Ú[ŒœœLœKœÙXİ[Û‹ZXYÙ›Û\Ú^™NŒMœÛX\™Ú[ŒÛ]\‹\ÜXÚ[™Î‹KŒ™[_KœÙXİ[Û‹ZXYÜ[Ù›Û\Ú^™NŒL\ØÛÛÜ˜\ŠK[]]Y
+_K›ZY^ÙÜšY][\]KXÛÛ[[œÎ›Z[›X^
+KÙœŠHZ[›X^
+YœŠ_K˜Ú\XØ\™ÜY[™ÎŒŒŒMK˜Ú\ZXYÙ\Ü^N™›^Ú\İYKXÛÛ[œÜXÙKX™]ÙY[Ø[YÛ‹Z][\Îœİ\K˜Ú\ZXYÙ›Û\Ú^™NŒM\ÛX\™Ú[ŒK›YÙ[™Ù\Ü^N™›^ÙØ\ŒLÜÙ›^]Ü˜\Ü˜\Ù›Û\Ú^™NŒL\ØÛÛÜ˜\ŠK[]]Y
+_K›YÙ[™^Ù\Ü^Nš[›[™KX›ØÚÎİÚYÜÚZYÚÜØ›Ü™\‹\˜Y]\ÎL	NÛX\™Ú[‹\šYÚ\K˜Ú\İÚYŒL	NÚZYÚŒM\ÛX\™Ú[‹]ÜŒLœK˜Ú\[›İ^Ù›Û\Ú^™NŒL\ØÛÛÜ˜\ŠK[]]Y
+_B‹˜XØÛİ[ŞÙÜšY][\]KXÛÛ[[œÎœ™\X]
+]]ËYš]Z[›X^
+YœŠJ_K˜XØÛİ[ÜY[™ÎŒNK˜XØÛİ[]ÜÙ\Ü^N™›^Ú\İYKXÛÛ[œÜXÙKX™]ÙY[Ø[YÛ‹Z][\Î˜Ù[\ŸKœİ˜]YŞ^Ù›Û\Ú^™NŒMÙ›Û]ÙZYÚÌKYŞØ›Ü™\Œ\ÛÛY˜\ŠK[[™JNÜY[™ÎŒÜØ›Ü™\‹\˜Y]\ÎNN\Ù›Û\Ú^™NŒLØÛÛÜ˜\ŠK[]]Y
+_K˜XØÛİ[]˜[Y^Ù›Û\Ú^™NŒÙ›Û]ÙZYÚÌÛ]\‹\ÜXÚ[™Î‹KŒ[NÛX\™Ú[‹]ÜŒMœK˜XØÛİ[\›İŞÙ\Ü^N™›^Ú\İYKXÛÛ[œÜXÙKX™]ÙY[ØÛÛÜ˜\ŠK[]]Y
+NÙ›Û\Ú^™NŒLœÛX\™Ú[‹]ÜÜK˜XØÛİ[\›İÈİ›Û™ŞØÛÛÜ˜\ŠK]^
+NÙ›Û]ÙZYÚŒK›Z[šKX˜\ÚZYÚØ˜XÚÙÜ›İ[™ˆÌŒ˜LÍNØ›Ü™\‹\˜Y]\Î\ÛX\™Ú[‹]ÜŒM\Ûİ™\™›İÎšY[ŸK›Z[šKX˜\ˆÙ\Ü^N˜›ØÚÎÚZYÚŒL	NØ˜XÚÙÜ›İ[™˜\ŠKYÜ™Y[ŠNØ›Ü™\‹\˜Y]\Î\Kœ™YÚ[Y^Ø›Ü™\‹]ÜŒ\ÛÛY˜\ŠK[[™JNÛX\™Ú[‹]ÜŒM\ÜY[™Ë]ÜŒLœKœ™YÚ[YK[[™^Ù\Ü^N™›^Ú\İYKXÛÛ[œÜXÙKX™]ÙY[Ù›Û\Ú^™NŒLœKœ™YÚ[YK[[™HÜ[ØÛÛÜ˜\ŠK[]]Y
+_Kœ™YÚ[YHÙ›Û\Ú^™NŒL\ØÛÛÜˆØNXXÌÎÛX\™Ú[ÜÛ[™KZZYÚŒK_B‹›İÙ\ÙÜšY][\]KXÛÛ[[œÎŒYœˆYœŸKX›K]Ü˜\Ûİ™\™›İÎ˜]]ßKX›^İÚYŒL	NØ›Ü™\‹XÛÛ\ÙN˜ÛÛ\ÙNÙ›Û\Ú^™NŒLœKX›Hİ^X[YÛ›YØÛÛÜ˜\ŠK[]]Y
+NÙ›Û]ÙZYÚLÜY[™ÎŒLØ›Ü™\‹X›İÛNŒ\ÛÛY˜\ŠK[[™JNİÚ]K\ÜXÙN››İÜ˜\KX›HÜY[™ÎŒL\Ø›Ü™\‹X›İÛNŒ\ÛÛYÌYÌÌİÚ]K\ÜXÙN››İÜ˜\K™[\^ØÛÛÜ˜\ŠK[]]Y
+Nİ^X[YÛ˜Ù[\ÜY[™ÎŒZ[\Ü[K™›Ûİ\ØÛÛÜˆÍÍNNÙ›Û\Ú^™NŒL\İ^X[YÛ˜Ù[\ÛX\™Ú[‹]ÜŒKœ™Yœ™\ÚØÛÛÜ˜\ŠK[]]Y
+NÙ›Û\Ú^™NŒL\X^ØÛÛÜ˜\ŠKXŞX[Š_BYYXJX^]ÚYL
+^Ë›Y]šXÜŞÙÜšY][\]KXÛÛ[[œÎœ™\X]
+‹Z[›X^
+YœŠJ_K›ZYK›İÙ\ÙÜšY][\]KXÛÛ[[œÎŒYœŸK˜XØÛİ[ŞÙÜšY][\]KXÛÛ[[œÎŒYœŸKÜ˜\ÜY[™ÎŒŒœM\œKÜØ[YÛ‹Z][\Î™›^\İ\ÙØ\ŒLœKœİ]\ŞÙ›Û\Ú^™NŒKœİ]\È™İÙ›Û\Ú^™NŒLœ_BÜİ[O‚ÚXY‚›ÙOXZ[ˆÛ\ÜÏHÜ˜\‚XY\ˆÛ\ÜÏHÜ]ˆÛ\ÜÏH˜œ˜[™]ˆÛ\ÜÏH›ÙÛÈ”Ù]]]ˆÛ\ÜÏH™^YXœ›İÈ“ØØ[Ú[][][ÛÙ]]ˆÛ\ÜÏH]H“X\šÙ]™\ÙX\˜ÚÜ[ˆİ[OH˜ÛÛÜ˜\ŠK[]]Y
+NÙ›Û]ÙZYÚ‹È\\ˆXÜÜ[Ù]]ˆÛ\ÜÏHœİXˆ’[™\[™[Ú[][]Y^\š[Y[È0­È›È]™HÜ™\œÏÙ]Ù]Ù]]ˆÛ\ÜÏHœİ]\ÈHÛ\ÜÏH™İˆYHšX[İÚOÜ[ˆYHšX[^ÛÛ›™Xİ[™ÈÈØØ[\\ˆXØÛİ[ø )ÜÜ[Ù]ÚXY\‚ÙXİ[ÛˆÛ\ÜÏH™ÜšYY]šXÜÈˆYH›Y]šXÜÈÜÙXİ[Û‚ÙXİ[ÛˆÛ\ÜÏH™ÜšYZYH]ˆÛ\ÜÏH˜Ø\™Ú\XØ\™]ˆÛ\ÜÏH˜Ú\ZXY]‘\]Z]Hİ™\ˆ[YOÚ]ˆÛ\ÜÏHœİXˆ“X\šÙYXØÛİ[˜[YK[˜ÛY[™ÈÜ[ˆÜÚ][ÛœÏÙ]Ù]]ˆÛ\ÜÏH›YÙ[™ˆYH›YÙ[™Ù]Ù]Ø[˜\ÈYH™\]Z]PÚ\ˆÛ\ÜÏH˜Ú\ØØ[˜\Ï]ˆÛ\ÜÏH˜Ú\[›İH•\]\È]™\HMHÙXÛÛ™È0­È˜[Y\È\™HÚ[][]YÙ]Ù]]ˆÛ\ÜÏH˜Ø\™]ˆÛ\ÜÏHœÙXİ[Û‹ZXYˆİ[OH›X\™Ú[Œ•[š]™\œÙOÚÜ[ˆYH[š]™\œÙPÛİ[ÜÜ[Ù]]ˆÛ\ÜÏHœİXˆˆİ[OH›[™KZZYÚŒK•HRHXØÛİ[Û\ÜÚYšY\ÈMK[Z[]HX\šÙ]™YÚ[Y\ÈXÜ›ÜÜÈHÙ[XİY\]ZYÛÚ[œËˆ]ÚÛÜÙ\È™[™YX[ˆ™]™\œÚ[Û‹Üˆİ^\È›]ˆÜÚ][Ûˆ[Z]È™[XZ[ˆš^YÙ]]ˆYH˜ZS›İ\Èˆİ[OH›X\™Ú[‹]ÜŒM\Ù]Ù]ÜÙXİ[Û‚]ˆÛ\ÜÏHœÙXİ[Û‹ZXY”\\ˆXØÛİ[ÏÚÜ[’[™\[™[İ˜]YŞHšX[È0­È	Kİ\[™ÈØ\ÚXXÚÜÜ[Ù]ÙXİ[ÛˆÛ\ÜÏH™ÜšYXØÛİ[ÈˆYH˜XØÛİ[ÈÜÙXİ[Û‚ÙXİ[ÛˆÛ\ÜÏH™ÜšYİÙ\ˆ]]ˆÛ\ÜÏHœÙXİ[Û‹ZXY“Ü[ˆÜÚ][ÛœÏÚÜ[[^\š[Y[ÏÜÜ[Ù]]ˆÛ\ÜÏH˜Ø\™X›K]Ü˜\X›HÛ\ÜÏHX›HXY”İ˜]YŞOİ“X\šÙ]İ“X\šÏİ•[œ™X[^™Y	˜[\ÓİİİXY›ÙHYHœÜÚ][ÛœÈİ›ÙOİX›OÙ]Ù]]]ˆÛ\ÜÏHœÙXİ[Û‹ZXY”™XÙ[ÛÜÙY˜Y\ÏÚÜ[“™]Ù\İš\œİÜÜ[Ù]]ˆÛ\ÜÏH˜Ø\™X›K]Ü˜\X›HÛ\ÜÏHX›HXY”İ˜]YŞOİ“X\šÙ]İ‘^]İ“™]	˜[\ÓİİİXY›ÙHYH˜Y\Èİ›ÙOİX›OÙ]Ù]ÜÙXİ[Û‚]ˆÛ\ÜÏH™›Ûİ\ˆ“ØØ[\Ú›Ø\™0­ÈX›XÈÜ˜ZÙ[ˆ]H0­È\\ˆ^Xİ][ÛˆÛ›H0­ÈÜ[ˆYH\]Y•ØZ][™È›Üˆ]OÜÜ[Ù]‚ÛXZ[‚ØÜš\‚˜ÛÛœİÛÛÜœÏ^İ™[™‰ÈÍÙ˜L	ËYX[—Ü™]™\œÚ[Û‰ÈÙNÍÍ‰ËYX[—Ü™]™\œÚ[Û—Ùš[\™Y‰ÈÍÌÙ™LÉË[XWÜ™YÚ[YN‰ÈÎN™‰ßNÂ˜ÛÛœİX™[Ï^İ™[™‰Õ™[™˜\Ù[[™IËYX[—Ü™]™\œÚ[Û‰ÓYX[‹\™]™\œÚ[Ûˆ˜\Ù[[™IËYX[—Ü™]™\œÚ[Û—Ùš[\™Y‰Õ™[™Yš[\™YYX[ˆ™]™\œÚ[Ûˆ
+^\š[Y[
+IË[XWÜ™YÚ[YN‰Ó[XH™YÚ[YHİ˜]YŞIßNÂ˜ÛÛœİ\ØÏ\ÏO”İš[™ÊÏÏÉÉÊKœ™\XÙJÖÉˆ‰×KÙËÏOŠÉÉ‰Î‰É˜[\ÉË	Ï	Î‰É›ÉË	Ï‰Î‰É™İÉË	È‰Î‰Éœ][İÉË‰È‰ÉˆÌÎNÉßVØ×JJNÂ˜ÛÛœİ[Û™^O[O›™]È[“[X™\‘›Ü›X]
+	Ù[‹UTÉËÜİ[N‰Øİ\œ™[˜ŞIËİ\œ™[˜ŞN‰ÕTÑ	ËX^[][Qœ˜Xİ[Û‘YÚ]ÎŒŸJK™›Ü›X]
+[X™\ŠŸ
+JNÂ˜ÛÛœİİ[O˜	Ó[X™\ŠŸ
+OLÉÊÉÎ‰ÉßIÓ[X™\ŠŸ
+KÑš^Y
+Š_IXÂ™[˜İ[ÛˆXØÛİ[Ø\™
+J^ØÛÛœİÛÛÜXÛÛÜœÖØKœİ˜]YŞW_	ÈÍÙ˜L	ÎØÛÛœİ›S[X™\ŠKœ›
+NØÛÛœİ^Üİ\™OSX]›Z[ŠLX]›X^
+
+[X™\ŠKœİ\[™×ØØ\ÚL
+KS[X™\ŠK˜Ø\Ú
+JKÓ[X™\ŠKœİ\[™×ØØ\ÚL
+JŒL
+JNÛ]ZOIÉÎÚYŠKœİ˜]YŞOOOIÛ[XWÜ™YÚ[YIÊ^ØÛÛœİ›İ\ÏSØš™Xİ™[šY\ÊK›[Ù[Û›İ\ßßJNØÛÛœİX\›š[™ÏXK›X\›š[™×Üİ]ßßNØZOIÏ]ˆÛ\ÜÏHœ™YÚ[YH]ˆÛ\ÜÏHœ™YÚ[YK[[™Hİ›Û™Ï“ØØ[[Ù[Üİ›Û™ÏÜ[‰ÊÙ\ØÊK›[Ù[	Ó[XIÊJÉÏÜÜ[Ù]]ˆÛ\ÜÏHœ™YÚ[YK[[™Hˆİ[OH›X\™Ú[‹]ÜœÜ[“]\İ™YÚ[YH›İ\ÏÜÜ[İ›Û™Ï‰ÊÛ›İ\Ë›[™İ
+ÉÈX\šÙ]ÏÜİ›Û™ÏÙ]]ˆÛ\ÜÏHœ™YÚ[YK[[™Hˆİ[OH›X\™Ú[‹]ÜœÜ[”™\ÛÛ™Yİ]ÛÛY\ÏÜÜ[İ›Û™Ï‰ÊÓ[X™\ŠX\›š[™Ëœ™\ÛÛ™YÜØ[\\ß
+JÉÏÜİ›Û™ÏÙ]]ˆÛ\ÜÏHœ™YÚ[YK[[™Hˆİ[OH›X\™Ú[‹]ÜœÜ[‘™YY˜XÚÈİ]OÜÜ[İ›Û™Ï‰ÊÊX\›š[™Ëœ™XYOÉØØ[Xœ˜][™ÉÎ‰ØÛÛXİ[™È]IÊJÉÏÜİ›Û™ÏÙ]Ù]‰ß\™]\›ˆ\XÛHÛ\ÜÏH˜Ø\™XØÛİ[]ˆÛ\ÜÏH˜XØÛİ[]Ü]ˆÛ\ÜÏHœİ˜]YŞH‰Ù\ØÊX™[ÖØKœİ˜]YŞW_Kœİ˜]YŞJ_OÙ]Ü[ˆÛ\ÜÏHYÈ‰ØK›Û›[™OÉø¥ãÈ•S“’S‘ÉÎ‰ø¥âÈÕSIßOÜÜ[Ù]]ˆÛ\ÜÏH˜XØÛİ[]˜[YH‰Û[Û™^JK™\]Z]J_OÙ]]ˆÛ\ÜÏH˜XØÛİ[\›İÈÜ[“™]	˜[\ÓÜÜ[İ›Û™ÈÛ\ÜÏH‰Ü›LÉÜÜÉÎ‰Û™YÉßH‰Û[Û™^J›
+_H0­È	Üİ
+Kœ™]\›—Üİ
+_OÜİ›Û™ÏÙ]]ˆÛ\ÜÏH˜XØÛİ[\›İÈÜ[Ø\ÚÜÜ[İ›Û™Ï‰Û[Û™^JK˜Ø\Ú
+_OÜİ›Û™ÏÙ]]ˆÛ\ÜÏH˜XØÛİ[\›İÈÜ[”™X[^™YÜÜ[İ›Û™Ï‰Û[Û™^JKœ™X[^™YÜ›
+_OÜİ›Û™ÏÙ]]ˆÛ\ÜÏH˜XØÛİ[\›İÈÜ[ÛÜÙY˜Y\ÈÈÜ[ÜÜ[İ›Û™Ï‰ØK˜ÛÜÙYİ˜Y\ßHÈ	ÊK›Ü[—ÜÜÚ][Ûœß×JK›[™İOÜİ›Û™ÏÙ]]ˆÛ\ÜÏH›Z[šKX˜\ˆˆİ[OHÚY‰Ù^Üİ\™_INØ˜XÚÙÜ›İ[™‰ØÛÛÜŸHØÙ]‰ØZ_OØ\XÛO˜B™[˜İ[Ûˆ˜]ĞÚ\
+XØÛİ[Ê^ØÛÛœİÏYØİ[Y[™Ù][[Y[RY
+	Ù\]Z]PÚ\	ÊKXË™Ù]›İ[™[™ĞÛY[™Xİ
 
-import json
-from datetime import datetime, timezone
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
-from typing import Any
-from urllib.parse import urlsplit
+K]Ú[™İË™]šXÙT^[˜][ßNØËÚYSX]›X^
+ÌŒ‹ÚY
+™
+NØËšZYÚLMJ™ØÛÛœİXË™Ù]ÛÛ^
+	Ì™	ÊNŞœØØ[J
+NØÛÛœİÏ\‹ÚYLMK^ÛMŒL‹ŒMŒNŞ˜ÛX\”™Xİ
+Ë
+NØÛÛœİÙ]ÏXXØÛİ[Ë›X\
+OOŠØKÎ˜K™\]Z]WØİ\™_×_JJK™š[\ŠÏOœËœË›[™İŒJNÚYŠ\Ù]Ë›[™İ
+^Ş™š[İ[OIÈÎNMØM‰ÎŞ™›ÛIÌLÜÙYÛÙHRIÎŞ™š[^
+	ÕHÚ\Ú[˜]ÈY\ˆHš\œİÛÜÙYØ[™H\È›ØÙ\ÜÙY‰Ë›L
+NÜ™]\›ŸXÛÛœİ˜[Ï\Ù]Ë™›]X\
+ÏOœËœË›X\
+OOœK™\]Z]JJNÛ]ÏSX]›Z[Š‹‹˜[ÊKOSX]›X^
+‹‹˜[ÊNÚYŠK[ÏJ^ÚJÏLNÛËOL_XÛÛœİO]Oœ
+ÊK]ŠKÊK[ÊJŠ\\˜ŠNŞœİ›ÚÙTİ[OIÈÌÌÍ‰ÎŞ›[™UÚYLNŞ™š[İ[OIÈÎLXLIÎŞ™›ÛIÌLÙYÛÙHRIÎÙ›ÜŠ]OLÚOÚJÊÊ^ØÛÛœİ[ÊÊK[ÊJšKÌË^O^JŠNŞ˜™YÚ[”]
 
-from .paper import PAPER_STRATEGY_NAMES, paper_summary
-from .storage import MarketStore
+NŞ›[İ™UÊ›^JNŞ›[™UÊË\œ‹^JNŞœİ›ÚÙJ
+NŞ™š[^
+[Û™^JŠK^JÌÊ_Y›ÜŠÛÛœİÈÙˆÙ]Ê^ØÛÛœİÏ\ËœÎŞœİ›ÚÙTİ[OXÛÛÜœÖÜË˜Kœİ˜]YŞWNŞ›[™UÚYLŞ˜™YÚ[”]
 
+NÜË™›Ü‘XXÚ
 
-PAGE = r"""<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Market Research Â· Paper Lab</title>
-<style>
-:root{color-scheme:dark;--bg:#090d12;--panel:#111821;--panel2:#151f2a;--line:#23303d;--text:#ecf1f7;--muted:#8d9aaa;--green:#43d6a0;--red:#ff7383;--gold:#e8c476;--blue:#8da8ff;--cyan:#73d6e3}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 70% -20%,#1a2a36 0%,var(--bg) 48%);color:var(--text);font:14px/1.5 Segoe UI,Inter,system-ui,sans-serif;min-height:100vh}
-.wrap{max-width:1440px;margin:auto;padding:32px 28px 60px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px}.brand{display:flex;gap:14px;align-items:center}.logo{width:42px;height:42px;border-radius:13px;background:linear-gradient(145deg,#67e2b1,#1f8f73);display:grid;place-items:center;color:#06130e;font-weight:900;font-size:19px;box-shadow:0 6px 26px #2fc39435}.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--green);font-weight:700}.title{font-size:23px;font-weight:700;letter-spacing:-.03em}.sub{color:var(--muted);font-size:12px;margin-top:2px}.status{display:flex;align-items:center;gap:9px;color:#c5d0db;background:#111a23;border:1px solid var(--line);padding:9px 13px;border-radius:999px;font-size:12px}.dot{height:8px;width:8px;border-radius:50%;background:var(--green);box-shadow:0 0 14px #43d6a080}.dot.warn{background:var(--gold);box-shadow:0 0 14px #e8c47680}
-.grid{display:grid;gap:14px}.metrics{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:16px}.card{background:linear-gradient(145deg,#131c26eF,#101720ef);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 14px 40px #0002}.metric .label{color:var(--muted);font-size:12px}.metric .value{font-size:27px;font-weight:700;letter-spacing:-.04em;margin-top:8px;font-variant-numeric:tabular-nums}.metric .hint{color:var(--muted);font-size:11px;margin-top:4px}.pos{color:var(--green)!important}.neg{color:var(--red)!important}
-.section-head{display:flex;justify-content:space-between;align-items:end;margin:26px 2px 12px}.section-head h2{font-size:16px;margin:0;letter-spacing:-.02em}.section-head span{font-size:11px;color:var(--muted)}.middle{grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr)}.chart-card{padding:20px 20px 14px}.chart-head{display:flex;justify-content:space-between;align-items:start}.chart-head h2{font-size:15px;margin:0}.legend{display:flex;gap:13px;flex-wrap:wrap;font-size:11px;color:var(--muted)}.legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}.chart{width:100%;height:255px;margin-top:12px}.chart-note{font-size:11px;color:var(--muted)}
-.accounts{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}.account{padding:18px}.account-top{display:flex;justify-content:space-between;align-items:center}.strategy{font-size:14px;font-weight:700}.tag{border:1px solid var(--line);padding:3px 8px;border-radius:999px;font-size:10px;color:var(--muted)}.account-value{font-size:24px;font-weight:700;letter-spacing:-.04em;margin-top:16px}.account-row{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-top:7px}.account-row strong{color:var(--text);font-weight:600}.mini-bar{height:4px;background:#202a35;border-radius:9px;margin-top:15px;overflow:hidden}.mini-bar b{display:block;height:100%;background:var(--green);border-radius:9px}.regime{border-top:1px solid var(--line);margin-top:15px;padding-top:12px}.regime-line{display:flex;justify-content:space-between;font-size:12px}.regime-line span{color:var(--muted)}.regime p{font-size:11px;color:#a9b5c3;margin:7px 0 0;line-height:1.45}
-.lower{grid-template-columns:1fr 1fr}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;font-size:12px}.table th{text-align:left;color:var(--muted);font-weight:500;padding:10px 8px;border-bottom:1px solid var(--line);white-space:nowrap}.table td{padding:11px 8px;border-bottom:1px solid #1d2732;white-space:nowrap}.empty{color:var(--muted);text-align:center;padding:24px 8px!important}.footer{color:#667585;font-size:11px;text-align:center;margin-top:28px}.refresh{color:var(--muted);font-size:11px}a{color:var(--cyan)}
-@media(max-width:900px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.middle,.lower{grid-template-columns:1fr}.accounts{grid-template-columns:1fr}.wrap{padding:22px 15px 42px}.top{align-items:flex-start;gap:12px}.status{font-size:0}.status .dot{font-size:12px}}
-</style>
-</head>
-<body><main class="wrap">
-<header class="top"><div class="brand"><div class="logo">P</div><div><div class="eyebrow">Local simulation</div><div class="title">Market Research <span style="color:var(--muted);font-weight:400">/ Paper Lab</span></div><div class="sub">Independent simulated experiments Â· no live orders</div></div></div><div class="status"><i class="dot" id="healthDot"></i><span id="healthText">Connecting to local paper accountsâ€¦</span></div></header>
-<section class="grid metrics" id="metrics"></section>
-<section class="grid middle"><div class="card chart-card"><div class="chart-head"><div><h2>Equity over time</h2><div class="sub">Marked account value, including open positions</div></div><div class="legend" id="legend"></div></div><canvas id="equityChart" class="chart"></canvas><div class="chart-note">Updates every 15 seconds Â· values are simulated</div></div><div class="card"><div class="section-head" style="margin:0 0 8px"><h2>Universe</h2><span id="universeCount"></span></div><div class="sub" style="line-height:1.8">The AI account classifies 15-minute market regimes across the selected liquid coins. It chooses trend, mean reversion, or stays flat. Position limits remain fixed.</div><div id="aiNotes" style="margin-top:15px"></div></div></section>
-<div class="section-head"><h2>Paper accounts</h2><span>Independent strategy trials Â· $1,000 starting cash each</span></div><section class="grid accounts" id="accounts"></section>
-<section class="grid lower"><div><div class="section-head"><h2>Open positions</h2><span>All experiments</span></div><div class="card table-wrap"><table class="table"><thead><tr><th>Strategy</th><th>Market</th><th>Mark</th><th>Unrealized P&amp;L</th></tr></thead><tbody id="positions"></tbody></table></div></div><div><div class="section-head"><h2>Recent closed trades</h2><span>Newest first</span></div><div class="card table-wrap"><table class="table"><thead><tr><th>Strategy</th><th>Market</th><th>Exit</th><th>Net P&amp;L</th></tr></thead><tbody id="trades"></tbody></table></div></div></section>
-<div class="footer">Local dashboard Â· public Kraken data Â· paper execution only Â· <span id="updated">Waiting for data</span></div>
-</main>
-<script>
-const colors={trend:'#43d6a0',mean_reversion:'#e8c476',mean_reversion_filtered:'#73d6e3',llama_regime:'#8da8ff'};
-const labels={trend:'Trend baseline',mean_reversion:'Mean-reversion baseline',mean_reversion_filtered:'Trend-filtered mean reversion (experiment)',llama_regime:'Llama regime strategy'};
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(Number(n||0));
-const pct=n=>`${Number(n||0)>=0?'+':''}${Number(n||0).toFixed(2)}%`;
-function accountCard(a){const color=colors[a.strategy]||'#43d6a0';const pnl=Number(a.pnl||0);const exposure=Math.min(100,Math.max(0,(Number(a.starting_cash||1000)-Number(a.cash||0))/Number(a.starting_cash||1000)*100));let ai='';if(a.strategy==='llama_regime'){const notes=Object.entries(a.model_notes||{});const learning=a.learning_stats||{};ai='<div class="regime"><div class="regime-line"><strong>Local model</strong><span>'+esc(a.model||'Llama')+'</span></div><div class="regime-line" style="margin-top:6px"><span>Latest regime notes</span><strong>'+notes.length+' markets</strong></div><div class="regime-line" style="margin-top:6px"><span>Resolved 4h outcomes</span><strong>'+Number(learning.resolved_samples||0)+'</strong></div><div class="regime-line" style="margin-top:6px"><span>Feedback state</span><strong>'+(learning.ready?'calibrating':'collecting data')+'</strong></div></div>'}return `<article class="card account"><div class="account-top"><div class="strategy">${esc(labels[a.strategy]||a.strategy)}</div><span class="tag">${a.online?'â— RUNNING':'â—‹ STALE'}</span></div><div class="account-value">${money(a.equity)}</div><div class="account-row"><span>Net P&amp;L</span><strong class="${pnl>=0?'pos':'neg'}">${money(pnl)} Â· ${pct(a.return_pct)}</strong></div><div class="account-row"><span>Cash</span><strong>${money(a.cash)}</strong></div><div class="account-row"><span>Realized</span><strong>${money(a.realized_pnl)}</strong></div><div class="account-row"><span>Closed trades / open</span><strong>${a.closed_trades} / ${(a.open_positions||[]).length}</strong></div><div class="mini-bar"><b style="width:${exposure}%;background:${color}"></b></div>${ai}</article>`}
-function drawChart(accounts){const c=document.getElementById('equityChart'),r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;c.width=Math.max(320,r.width*d);c.height=255*d;const x=c.getContext('2d');x.scale(d,d);const w=r.width,h=255,p={l:54,r:12,t:14,b:24};x.clearRect(0,0,w,h);const sets=accounts.map(a=>({a,pts:a.equity_curve||[]})).filter(s=>s.pts.length>1);if(!sets.length){x.fillStyle='#8997a6';x.font='13px Segoe UI';x.fillText('The chart will draw after the first closed candle is processed.',p.l,100);return}const vals=sets.flatMap(s=>s.pts.map(q=>q.equity));let lo=Math.min(...vals),hi=Math.max(...vals);if(hi-lo<1){hi+=1;lo-=1}const y=v=>p.t+(hi-v)/(hi-lo)*(h-p.t-p.b);x.strokeStyle='#273442';x.lineWidth=1;x.fillStyle='#8291a1';x.font='10px Segoe UI';for(let i=0;i<4;i++){const v=lo+(hi-lo)*i/3,yy=y(v);x.beginPath();x.moveTo(p.l,yy);x.lineTo(w-p.r,yy);x.stroke();x.fillText(money(v),4,yy+3)}for(const s of sets){const pts=s.pts;x.strokeStyle=colors[s.a.strategy];x.lineWidth=2;x.beginPath();pts.forEach((q,i)=>{const xx=p.l+(w-p.l-p.r)*(i/Math.max(1,pts.length-1));i?x.lineTo(xx,y(q.equity)):x.moveTo(xx,y(q.equity))});x.stroke()}document.getElementById('legend').innerHTML=sets.map(s=>`<span><i style="background:${colors[s.a.strategy]}"></i>${esc(labels[s.a.strategy])}</span>`).join('')}
-function render(data){const ac=data.accounts||[];const totals=ac.reduce((t,a)=>({start:t.start+Number(a.starting_cash||0),equity:t.equity+Number(a.equity||0),pnl:t.pnl+Number(a.pnl||0),realized:t.realized+Number(a.realized_pnl||0),online:t.online+(a.online?1:0)}),{start:0,equity:0,pnl:0,realized:0,online:0});document.getElementById('metrics').innerHTML=[['Virtual capital',money(totals.start),'Across separate experiments'],['Combined marked equity',money(totals.equity),'Separate experiments, not one account'],['Combined net P&L',money(totals.pnl),`${pct(totals.start?totals.pnl/totals.start*100:0)} overall`],['Feed runners',`${totals.online} / ${ac.length}`,`${data.market_count||0} markets Â· ${(data.intervals||[60]).map(i=>i+'m').join(', ')} bars`]].map((x,i)=>`<article class="card metric"><div class="label">${x[0]}</div><div class="value ${i===2?(totals.pnl>=0?'pos':'neg'):''}">${x[1]}</div><div class="hint">${x[2]}</div></article>`).join('');document.getElementById('accounts').innerHTML=ac.map(accountCard).join('');document.getElementById('universeCount').textContent=`${data.market_count||0} tracked`;const online=ac.length>0&&totals.online===ac.length;document.getElementById('healthDot').classList.toggle('warn',!online);document.getElementById('healthText').textContent=online?'Paper runners checking market data':'One or more paper runners need attention';document.getElementById('updated').textContent=`Updated ${new Date().toLocaleTimeString()}`;const pos=ac.flatMap(a=>(a.open_positions||[]).map(p=>({strategy:a.strategy,...p})));document.getElementById('positions').innerHTML=pos.length?pos.map(p=>`<tr><td>${esc(labels[p.strategy])}</td><td>${esc(p.pair)}</td><td>${money(p.mark_price)}</td><td class="${Number(p.unrealized_pnl)>=0?'pos':'neg'}">${money(p.unrealized_pnl)}</td></tr>`).join(''):'<tr><td colspan="4" class="empty">No open simulated positions yet</td></tr>';const trades=ac.flatMap(a=>(a.trade_log||[]).map(t=>({strategy:a.strategy,...t}))).sort((a,b)=>Number(b.exit_timestamp||0)-Number(a.exit_timestamp||0)).slice(0,12);document.getElementById('trades').innerHTML=trades.length?trades.map(t=>`<tr><td>${esc(labels[t.strategy])}</td><td>${esc(t.pair)}</td><td>${t.exit_timestamp?new Date(t.exit_timestamp*1000).toLocaleString():'â€”'}</td><td class="${Number(t.pnl)>=0?'pos':'neg'}">${money(t.pnl)}</td></tr>`).join(''):'<tr><td colspan="4" class="empty">Closed trades will appear here</td></tr>';const notes=ac.find(a=>a.strategy==='llama_regime')?.model_notes||{};const items=Object.entries(notes);document.getElementById('aiNotes').innerHTML=items.length?items.slice(0,8).map(([pair,n])=>{const news=(n.news||[]).slice(0,3).map(h=>'<div class="sub" style="margin:4px 0 0">'+esc(h.source)+' Â· '+esc(h.published_at)+' Â· '+esc(h.title)+'</div>').join('');return '<div class="regime-line" style="padding:8px 0;border-top:1px solid var(--line)"><strong>'+esc(pair)+'</strong><span>'+esc(n.regime)+' Â· '+(Number(n.confidence||0)*100).toFixed(0)+'%</span></div><div class="sub" style="margin:-4px 0 8px">'+esc(n.rationale||'')+'</div><div class=\"sub\" style=\"margin:-4px 0 8px\">News feed: '+esc(n.news_status||'not checked')+'</div>'+news}).join(''):'<div class="sub">The local modelâ€™s notes appear after it evaluates the next completed 15-minute bar.</div>';drawChart(ac)}
-async function refresh(){try{const response=await fetch('/api/dashboard',{cache:'no-store'});if(!response.ok)throw new Error('dashboard API unavailable');render(await response.json())}catch(e){document.getElementById('healthDot').classList.add('warn');document.getElementById('healthText').textContent='Waiting for local paper data'}}
-refresh();setInterval(refresh,15000);window.addEventListener('resize',refresh);
-</script></body></html>"""
+KJOOØÛÛœİ\›
+ÊË\›\œŠJŠKÓX]›X^
+KË›[™İLJJNÚOŞ›[™UÊJK™\]Z]JJN›[İ™UÊJK™\]Z]JJ_JNŞœİ›ÚÙJ
+_YØİ[Y[™Ù][[Y[RY
+	ÛYÙ[™	ÊKš[›™\’S\Ù]Ë›X\
+ÏO˜Ü[Hİ[OH˜˜XÚÙÜ›İ[™‰ØÛÛÜœÖÜË˜Kœİ˜]YŞW_HÚO‰Ù\ØÊX™[ÖÜË˜Kœİ˜]YŞWJ_OÜÜ[˜
+Kš›Ú[Š	ÉÊ_B™[˜İ[Ûˆ™[™\Š]J^ØÛÛœİXÏY]K˜XØÛİ[ß×NØÛÛœİİ[ÏXXËœ™YXÙJ
+JOOŠÜİ\œİ\
+Ó[X™\ŠKœİ\[™×ØØ\Ú
+K\]Z]N™\]Z]JÓ[X™\ŠK™\]Z]_
+K›œ›
+Ó[X™\ŠKœ›
+K™X[^™Yœ™X[^™Y
+Ó[X™\ŠKœ™X[^™YÜ›
+KÛ›[™N›Û›[™JÊK›Û›[™OÌNŒ
+_JKÜİ\Œ\]Z]NŒ›Œ™X[^™YŒÛ›[™NŒJNÙØİ[Y[™Ù][[Y[RY
+	ÛY]šXÜÉÊKš[›™\’SVÖÉÕš\X[Ø\][	Ë[Û™^Jİ[Ëœİ\
+K	ĞXÜ›ÜÜÈÙ\\˜]H^\š[Y[É×KÉĞÛÛXš[™YX\šÙY\]Z]IË[Û™^Jİ[Ë™\]Z]JK	ÔÙ\\˜]H^\š[Y[Ë›İÛ™HXØÛİ[	×KÉĞÛÛXš[™Y™]	“	Ë[Û™^Jİ[Ëœ›
+K	Üİ
+İ[Ëœİ\İİ[Ëœ›İİ[Ëœİ\
+ŒLŒ
+_Hİ™\˜[KÉÑ™YY[›™\œÉË	İİ[Ë›Û›[™_HÈ	ØXË›[™İX	Ù]K›X\šÙ]ØÛİ[HX\šÙ]È0­È	Ê]Kš[\˜[ßÍŒJK›X\
+OOšJÉÛIÊKš›Ú[Š	Ë	Ê_H˜\œØWK›X\
 
+JOO˜\XÛHÛ\ÜÏH˜Ø\™Y]šXÈ]ˆÛ\ÜÏH›X™[‰ŞÌ_OÙ]]ˆÛ\ÜÏH˜[YH	ÚOOOLÊİ[Ëœ›LÉÜÜÉÎ‰Û™YÉÊN‰ÉßH‰ŞÌW_OÙ]]ˆÛ\ÜÏHš[‰ŞÌ—_OÙ]Ø\XÛO˜
+Kš›Ú[Š	ÉÊNÙØİ[Y[™Ù][[Y[RY
+	ØXØÛİ[ÉÊKš[›™\’SXXË›X\
+XØÛİ[Ø\™
+Kš›Ú[Š	ÉÊNÙØİ[Y[™Ù][[Y[RY
+	İ[š]™\œÙPÛİ[	ÊK^ÛÛ[X	Ù]K›X\šÙ]ØÛİ[H˜XÚÙYØÛÛœİÛ›[™OXXË›[™İŒ	‰İ[Ë›Û›[™OOOXXË›[™İÙØİ[Y[™Ù][[Y[RY
+	ÚX[İ	ÊK˜Û\ÜÓ\İÙÙÛJ	İØ\›‰Ë[Û›[™JNÙØİ[Y[™Ù][[Y[RY
+	ÚX[^	ÊK^ÛÛ[[Û›[™OÉÔ\\ˆ[›™\œÈÚXÚÚ[™ÈX\šÙ]]IÎ‰ÓÛ™HÜˆ[Ü™H\\ˆ[›™\œÈ™YY][[Û‰ÎÙØİ[Y[™Ù][[Y[RY
+	İ\]Y	ÊK^ÛÛ[X\]Y	Û™]È]J
+KÓØØ[U[YTİš[™Ê
+_XØÛÛœİÜÏXXË™›]X\
+OOŠK›Ü[—ÜÜÚ][Ûœß×JK›X\
+OŠÜİ˜]YŞN˜Kœİ˜]YŞK‹‹œJJJNÙØİ[Y[™Ù][[Y[RY
+	ÜÜÚ][ÛœÉÊKš[›™\’S\ÜË›[™İÜÜË›X\
+O˜‰Ù\ØÊX™[ÖÜœİ˜]YŞWJ_Oİ‰Ù\ØÊœZ\Š_Oİ‰Û[Û™^J›X\š×ÜšXÙJ_OİÛ\ÜÏH‰Ó[X™\Š[œ™X[^™YÜ›
+OLÉÜÜÉÎ‰Û™YÉßH‰Û[Û™^J[œ™X[^™YÜ›
+_Oİİ˜
+Kš›Ú[Š	ÉÊN‰ÏÛÛÜ[HˆÛ\ÜÏH™[\H“›ÈÜ[ˆÚ[][]YÜÚ][ÛœÈY]İİ‰ÎØÛÛœİ˜Y\ÏXXË™›]X\
+OOŠK˜YWÛÙß×JK›X\
+OŠÜİ˜]YŞN˜Kœİ˜]YŞK‹‹JJJKœÛÜ
 
-def dashboard_data(database: str | Path) -> dict[str, Any]:
-    store = MarketStore(database)
-    accounts: list[dict[str, Any]] = []
-    now = int(datetime.now(timezone.utc).timestamp())
-    market_count = 0
-    intervals: set[int] = set()
-    for name in PAPER_STRATEGY_NAMES:
-        state = store.get_paper_state(name)
-        if not state or not state.get("active", True):
-            continue
-        summary = paper_summary(state)
-        intervals.add(int(state.get("interval", 60)))
-        last_check = int(state.get("last_check_timestamp", 0))
-        errors = state.get("feed_errors", [])
-        summary.update({
-            "equity_curve": state.get("equity_curve", []),
-            "last_check_timestamp": last_check,
-            "online": bool(last_check and now - last_check <= 900 and not errors),
-            "feed_errors": errors,
-        })
-        market_count = max(market_count, len(state.get("pairs", [])))
-        accounts.append(summary)
-    return {"accounts": accounts, "market_count": market_count, "intervals": sorted(intervals), "updated_utc": now}
+KŠOO“[X™\Š‹™^]İ[Y\İ[\
+KS[X™\ŠK™^]İ[Y\İ[\
+JKœÛXÙJLŠNÙØİ[Y[™Ù][[Y[RY
+	İ˜Y\ÉÊKš[›™\’S]˜Y\Ë›[™İİ˜Y\Ë›X\
+O˜‰Ù\ØÊX™[Öİœİ˜]YŞWJ_Oİ‰Ù\ØÊœZ\Š_Oİ‰İ™^]İ[Y\İ[\Û™]È]J™^]İ[Y\İ[\
+ŒL
+KÓØØ[Tİš[™Ê
+N‰ø %	ßOİÛ\ÜÏH‰Ó[X™\Šœ›
+OLÉÜÜÉÎ‰Û™YÉßH‰Û[Û™^Jœ›
+_Oİİ˜
+Kš›Ú[Š	ÉÊN‰ÏÛÛÜ[HˆÛ\ÜÏH™[\HÛÜÙY˜Y\ÈÚ[\X\ˆ\™Oİİ‰ÎØÛÛœİ›İ\ÏXXË™š[™
+OO˜Kœİ˜]YŞOOOIÛ[XWÜ™YÚ[YIÊOË›[Ù[Û›İ\ßßNØÛÛœİ][\ÏSØš™Xİ™[šY\Ê›İ\ÊNÙØİ[Y[™Ù][[Y[RY
+	ØZS›İ\ÉÊKš[›™\’SZ][\Ë›[™İÚ][\ËœÛXÙJ
+K›X\
 
+ÜZ\‹—JOOØÛÛœİ™]ÜÏJ‹›™]Üß×JKœÛXÙJÊK›X\
+O‰Ï]ˆÛ\ÜÏHœİXˆˆİ[OH›X\™Ú[H™YH‰ÊÙ\ØÊ\›
+JÉÈˆ\™Ù]H—Ø›[šÈˆ™[H››ÛÜ[™\ˆ›Ü™Y™\œ™\ˆ‰ÊÙ\ØÊ]JJÉÏØOœ‰ÊÙ\ØÊœÛİ\˜ÙJJÉÈ0­È	ÊÙ\ØÊœX›\ÚYØ]
+JÉÏÙ]‰ÊKš›Ú[Š	ÉÊNÜ™]\›ˆ	Ï]ˆÛ\ÜÏHœ™YÚ[YK[[™Hˆİ[OHœY[™ÎØ›Ü™\‹]ÜŒ\ÛÛY˜\ŠK[[™JHİ›Û™Ï‰ÊÙ\ØÊZ\ŠJÉÏÜİ›Û™ÏÜ[‰ÊÙ\ØÊ‹œ™YÚ[YJJÉÈ0­È	ÊÊ[X™\Š‹˜ÛÛ™šY[˜Ù_
+JŒL
+KÑš^Y
+
+JÉÉOÜÜ[Ù]]ˆÛ\ÜÏHœİXˆˆİ[OH›X\™Ú[‹M‰ÊÙ\ØÊ‹œ˜][Û˜[_	ÉÊJÉÏÙ]]ˆÛ\ÜÏWœİX—ˆİ[OW›X\™Ú[‹M“™]ÜÈ™YYˆ	ÊÙ\ØÊ‹›™]Ü×Üİ]\ß	Û›İÚXÚÙY	ÊJÉÏÙ]‰ÊÛ™]ÜßJKš›Ú[Š	ÉÊN‰Ï]ˆÛ\ÜÏHœİXˆ•HØØ[[Ù[8 &\È›İ\È\X\ˆY\ˆ]]˜[X]\ÈH™^ÛÛ\]YMK[Z[]H˜\‹Ù]‰ÎÙ˜]ĞÚ\
+XÊ_B˜\Ş[˜È[˜İ[Ûˆ™Yœ™\Ú
 
-class DashboardHandler(BaseHTTPRequestHandler):
-    server: "DashboardServer"
+^İ^ØÛÛœİ™\ÜÛœÙOX]ØZ]™]Ú
+	ËØ\KÙ\Ú›Ø\™	ËØØXÚN‰Û›Ë\İÜ™IßJNÚYŠ\™\ÜÛœÙK›ÚÊ]›İÈ™]È\œ›ÜŠ	Ù\Ú›Ø\™TH[˜]˜Z[X›IÊNÜ™[™\Š]ØZ]™\ÜÛœÙKšœÛÛŠ
+J_XØ]Ú
+J^ÙØİ[Y[™Ù][[Y[RY
+	ÚX[İ	ÊK˜Û\ÜÓ\İ˜Y
+	İØ\›‰ÊNÙØİ[Y[™Ù][[Y[RY
+	ÚX[^	ÊK^ÛÛ[IÕØZ][™È›ÜˆØØ[\\ˆ]Iß_Bœ™Yœ™\Ú
 
-    def do_GET(self) -> None:
-        path = urlsplit(self.path).path
-        if path == "/" or path == "/index.html":
-            body = PAGE.encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-        elif path == "/api/dashboard":
-            body = json.dumps(dashboard_data(self.server.database), allow_nan=False).encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Cache-Control", "no-store")
-        else:
-            body = b"Not found"
-            self.send_response(404)
-            self.send_header("Content-Type", "text/plain; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+NÜÙ][\˜[
+™Yœ™\ÚML
+NİÚ[™İË˜Y]™[\İ[™\Š	Ü™\Ú^™IË™Yœ™\Ú
+NÂÜØÜš\Ø›ÙOÚ[ˆˆˆ‚‚‚™Yˆ\Ú›Ø\™Ù]J]X˜\ÙNˆİˆ]
+HOˆXİÜİ‹[WN‚ˆİÜ™HHX\šÙ]İÜ™J]X˜\ÙJBˆXØÛİ[Îˆ\İÙXİÜİ‹[WWHH×Bˆ›İÈH[
+]][YK››İÊ[Y^›Û™K]ÊK[Y\İ[\
 
-    def log_message(self, format: str, *args: object) -> None:
-        return
+JBˆX\šÙ]ØÛİ[Hˆ[\˜[ÎˆÙ]Ú[HHÙ]
 
-
-class DashboardServer(ThreadingHTTPServer):
-    def __init__(self, host: str, port: int, database: str | Path) -> None:
-        self.database = str(database)
-        super().__init__((host, port), DashboardHandler)
-
-
-def serve_dashboard(host: str = "127.0.0.1", port: int = 8765, database: str = "data/market_research.sqlite3") -> None:
-    if host not in {"127.0.0.1", "localhost"}:
-        raise ValueError("The local dashboard may only bind to localhost")
-    server = DashboardServer(host, port, database)
-    print(f"Paper dashboard: http://{host}:{port}/", flush=True)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.server_close()
+Bˆ›Üˆ˜[YH[ˆTT—ÔÕUQÖWÓSQTÎ‚ˆİ]HHİÜ™K™Ù]Ü\\—Üİ]J˜[YJBˆYˆ›İİ]HÜˆ›İİ]K™Ù]
+˜Xİ]™H‹YJN‚ˆÛÛ[YBˆİ[[X\HH\\—Üİ[[X\Jİ]JBˆ[\˜[Ë˜Y
+[
+İ]K™Ù]
+š[\˜[‹Œ
+JJBˆ\İØÚXÚÈH[
+İ]K™Ù]
+›\İØÚXÚ×İ[Y\İ[\‹
+JBˆ\œ›ÜœÈHİ]K™Ù]
+™™YYÙ\œ›ÜœÈ‹×JBˆİ[[X\K\]JÂˆ™\]Z]WØİ\™Hˆİ]K™Ù]
+™\]Z]WØİ\™H‹×JKˆ›\İØÚXÚ×İ[Y\İ[\ˆ\İØÚXÚËˆ›Û›[™Hˆ›ÛÛ
+\İØÚXÚÈ[™›İÈH\İØÚXÚÈHL[™›İ\œ›ÜœÊKˆ™™YYÙ\œ›ÜœÈˆ\œ›ÜœËˆJBˆX\šÙ]ØÛİ[HX^
+X\šÙ]ØÛİ[[Šİ]K™Ù]
+œZ\œÈ‹×JJJBˆXØÛİ[Ë˜\[™
+İ[[X\JBˆ™]\›ˆÈ˜XØÛİ[ÈˆXØÛİ[Ë›X\šÙ]ØÛİ[ˆX\šÙ]ØÛİ[š[\˜[ÈˆÛÜY
+[\˜[ÊK\]Yİ]Èˆ›İßB‚‚˜Û\ÜÈ\Ú›Ø\™[™\Š˜\ÙR™\]Y\İ[™\ŠN‚ˆÙ\™\ˆ‘\Ú›Ø\™Ù\™\ˆ‚‚ˆYˆ×ÑÑU
+Ù[ŠHOˆ›Û™N‚ˆ]H\›Ü]
+Ù[‹œ]
+Kœ]ˆYˆ]OH‹ÈˆÜˆ]OH‹Ú[™^š[‚ˆ›ÙHHQÑK™[˜ÛÙJ]‹NŠBˆÙ[‹œÙ[™Ü™\ÜÛœÙJŒ
+BˆÙ[‹œÙ[™ÚXY\ŠÛÛ[U\H‹^Ú[ÈÚ\œÙ]]]‹NŠBˆ[Yˆ]OH‹Ø\KÙ\Ú›Ø\™‚ˆ›ÙHHœÛÛ‹™[\Ê\Ú›Ø\™Ù]JÙ[‹œÙ\™\‹™]X˜\ÙJK[İ×Û˜[Q˜[ÙJK™[˜ÛÙJ]‹NŠBˆÙ[‹œÙ[™Ü™\ÜÛœÙJŒ
+BˆÙ[‹œÙ[™ÚXY\ŠÛÛ[U\H‹˜\XØ][Û‹ÚœÛÛÈÚ\œÙ]]]‹NŠBˆÙ[‹œÙ[™ÚXY\ŠØXÚKPÛÛ›Û‹››Ë\İÜ™HŠBˆ[ÙN‚ˆ›ÙHHˆ“›İ›İ[™‚ˆÙ[‹œÙ[™Ü™\ÜÛœÙJ
+BˆÙ[‹œÙ[™ÚXY\ŠÛÛ[U\H‹^ÜZ[ÈÚ\œÙ]]]‹NŠBˆÙ[‹œÙ[™ÚXY\ŠÛÛ[S[™İ‹İŠ[Š›ÙJJJBˆÙ[‹™[™ÚXY\œÊ
+BˆÙ[‹Ùš[KÜš]J›ÙJB‚ˆYˆÙ×ÛY\ÜØYÙJÙ[‹›Ü›X]ˆİ‹
+˜\™ÜÎˆØš™Xİ
+HOˆ›Û™N‚ˆ™]\›‚‚‚˜Û\ÜÈ\Ú›Ø\™Ù\™\Š™XY[™ÒÙ\™\ŠN‚ˆYˆ×Ú[š]×ÊÙ[‹Üİˆİ‹Üˆ[]X˜\ÙNˆİˆ]
+HOˆ›Û™N‚ˆÙ[‹™]X˜\ÙHHİŠ]X˜\ÙJBˆİ\\Š
+K—×Ú[š]×Ê
+ÜİÜ
+K\Ú›Ø\™[™\ŠB‚‚™YˆÙ\™WÙ\Ú›Ø\™
+ÜİˆİˆHŒLËŒŒŒH‹Üˆ[HÍK]X˜\ÙNˆİˆH™]KÛX\šÙ]Ü™\ÙX\˜ÚœÜ[]LÈŠHOˆ›Û™N‚ˆYˆÜİ›İ[ˆÈŒLËŒŒŒH‹›ØØ[ÜİŸN‚ˆ˜Z\ÙH˜[YQ\œ›ÜŠ•HØØ[\Ú›Ø\™X^HÛ›Hš[™ÈØØ[ÜİŠBˆÙ\™\ˆH\Ú›Ø\™Ù\™\ŠÜİÜ]X˜\ÙJBˆš[
+ˆ”\\ˆ\Ú›Ø\™ˆ‹ËŞÚÜİNÜÜKÈ‹›\ÚUYJBˆN‚ˆÙ\™\‹œÙ\™WÙ›Ü™]™\Š
+Bˆ^Ù\Ù^X›Ø\™[\œ\‚ˆ\ÜÂˆš[˜[N‚ˆÙ\™\‹œÙ\™\—ØÛÜÙJ
+B

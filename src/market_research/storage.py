@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import contextmanager
+from collections import defaultdict
 from pathlib import Path
+from typing import Any, Iterator
 
 from .models import Candle
 
@@ -19,9 +22,25 @@ class MarketStore:
                 PRIMARY KEY(pair, interval, timestamp))""")
             db.execute("""CREATE TABLE IF NOT EXISTS paper_state (
                 state_id TEXT PRIMARY KEY, payload TEXT NOT NULL)""")
+            db.execute("""CREATE TABLE IF NOT EXISTS ai_observations (
+                state_id TEXT NOT NULL, pair TEXT NOT NULL, decision_timestamp INTEGER NOT NULL,
+                close REAL NOT NULL, regime TEXT NOT NULL, confidence REAL NOT NULL,
+                news_json TEXT NOT NULL, resolved_timestamp INTEGER, net_return_pct REAL,
+                PRIMARY KEY(state_id, pair, decision_timestamp))""")
+            db.execute("""CREATE INDEX IF NOT EXISTS ai_observations_resolved_idx
+                ON ai_observations(state_id, resolved_timestamp, regime)""")
 
-    def connect(self) -> sqlite3.Connection:
-        return sqlite3.connect(self.path)
+    @contextmanager
+    def connect(self) -> Iterator[sqlite3.Connection]:
+        db = sqlite3.connect(self.path)
+        try:
+            yield db
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
 
     def save_candles(self, candles: list[Candle]) -> int:
         if not candles:
@@ -60,6 +79,119 @@ class MarketStore:
         with self.connect() as db:
             db.execute("""INSERT INTO paper_state(state_id, payload) VALUES(?, ?)
                 ON CONFLICT(state_id) DO UPDATE SET payload=excluded.payload""", (account_id, text))
+
+    def record_ai_observations(self, state_id: str, observations: list[dict[str, Any]]) -> int:
+        """Keep at most one overlapping four-hour label per pair in the learning set."""
+        if not observations:
+            return 0
+        minimum_spacing_seconds = 4 * 60 * 60
+        rows = [
+            (
+                state_id,
+                str(item["pair"]).upper(),
+                int(item["decision_timestamp"]),
+                float(item["close"]),
+                str(item["regime"]),
+                float(item["confidence"]),
+                json.dumps(item.get("news", []), separators=(",", ":"), allow_nan=False),
+            )
+            for item in observations
+            if item.get("regime") in {"trend", "range", "high_volatility", "unknown"}
+        ]
+        inserted = 0
+        with self.connect() as db:
+            for row in rows:
+                _, pair, decision_timestamp, *_ = row
+                overlapping = db.execute("""SELECT 1 FROM ai_observations
+                    WHERE state_id=? AND pair=? AND decision_timestamp>? AND decision_timestamp<=?
+                    LIMIT 1""",
+                    (state_id, pair, decision_timestamp - minimum_spacing_seconds, decision_timestamp),
+                ).fetchone()
+                if overlapping:
+                    continue
+                cursor = db.execute("""INSERT OR IGNORE INTO ai_observations
+                    (state_id, pair, decision_timestamp, close, regime, confidence, news_json)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)""", row)
+                inserted += cursor.rowcount
+        return inserted
+
+    def resolve_ai_observations(
+        self,
+        state_id: str,
+        candles: dict[str, list[Candle]],
+        as_of_timestamp: int,
+        interval_minutes: int,
+        fee_bps: float,
+        slippage_bps: float,
+        horizon_minutes: int = 240,
+    ) -> int:
+        """Resolve only examples whose full forward horizon is available by the event time."""
+        if interval_minutes <= 0 or horizon_minutes % interval_minutes:
+            raise ValueError("Candle interval must divide the four-hour feedback horizon exactly.")
+        horizon_bars = horizon_minutes // interval_minutes
+        indexes = {
+            pair: {bar.timestamp: index for index, bar in enumerate(bars)}
+            for pair, bars in candles.items()
+        }
+        updates: list[tuple[int, float, str, str, int]] = []
+        fee_rate = fee_bps / 10_000
+        slippage_rate = slippage_bps / 10_000
+        with self.connect() as db:
+            pending = db.execute("""SELECT pair, decision_timestamp FROM ai_observations
+                WHERE state_id=? AND resolved_timestamp IS NULL AND decision_timestamp < ?
+                ORDER BY decision_timestamp""", (state_id, as_of_timestamp)).fetchall()
+            for pair, decision_timestamp in pending:
+                bars = candles.get(pair, [])
+                index = indexes.get(pair, {}).get(int(decision_timestamp))
+                if index is None or index + horizon_bars >= len(bars):
+                    continue
+                entry = bars[index + 1]
+                outcome = bars[index + horizon_bars]
+                if outcome.timestamp > as_of_timestamp or entry.open <= 0 or outcome.close <= 0:
+                    continue
+                entry_fill = entry.open * (1 + slippage_rate)
+                exit_fill = outcome.close * (1 - slippage_rate)
+                net_return_pct = ((exit_fill * (1 - fee_rate)) / (entry_fill * (1 + fee_rate)) - 1) * 100
+                updates.append((outcome.timestamp, net_return_pct, state_id, pair, int(decision_timestamp)))
+            if updates:
+                db.executemany("""UPDATE ai_observations
+                    SET resolved_timestamp=?, net_return_pct=?
+                    WHERE state_id=? AND pair=? AND decision_timestamp=?
+                    AND resolved_timestamp IS NULL""", updates)
+        return len(updates)
+
+    def get_ai_feedback(
+        self,
+        state_id: str,
+        as_of_timestamp: int,
+        minimum_regime_samples: int = 25,
+        max_samples: int = 2000,
+    ) -> dict[str, Any]:
+        """Summarize resolved outcomes visible at this simulated time, with a minimum sample gate."""
+        with self.connect() as db:
+            rows = db.execute("""SELECT regime, net_return_pct FROM ai_observations
+                WHERE state_id=? AND resolved_timestamp IS NOT NULL AND resolved_timestamp <= ?
+                ORDER BY resolved_timestamp DESC LIMIT ?""",
+                (state_id, as_of_timestamp, max_samples)).fetchall()
+        grouped: dict[str, list[float]] = defaultdict(list)
+        for regime, net_return_pct in rows:
+            grouped[str(regime)].append(float(net_return_pct))
+        by_regime = {}
+        for regime, results in grouped.items():
+            if len(results) < minimum_regime_samples:
+                continue
+            by_regime[regime] = {
+                "samples": len(results),
+                "mean_4h_net_return_pct": round(sum(results) / len(results), 4),
+                "win_rate_pct": round(sum(result > 0 for result in results) / len(results) * 100, 2),
+            }
+        return {
+            "target": "next_4h_long_return_after_fees_and_slippage",
+            "resolved_samples": len(rows),
+            "minimum_samples_per_regime": minimum_regime_samples,
+            "by_regime": by_regime,
+            "ready": bool(by_regime),
+        }
 
     def clear_paper_state(self, account_id: str | None = None) -> None:
         with self.connect() as db:

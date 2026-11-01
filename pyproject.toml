@@ -1,6 +1,13 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "autonomous-market-research"
 version = "0.1.0"
 description = "Local multi-market research and paper trading simulation"
 requires-python = ">=3.11"
 dependencies = []
+
+[project.optional-dependencies]
+learning = ["scikit-learn==1.9.1"]

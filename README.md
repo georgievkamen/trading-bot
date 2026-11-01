@@ -1,4 +1,4 @@
-# Autonomous Market Research — Core Engine
+# Autonomous Market Research â€” Core Engine
 
 This local research system compares two transparent crypto strategy baselines using public Kraken candles, adds a constrained local-AI regime experiment, and includes a dashboard for paper-account monitoring. All account balances, fills, and results are simulated.
 
@@ -6,11 +6,12 @@ This local research system compares two transparent crypto strategy baselines us
 
 - **Automatic crypto universe scan:** finds Kraken's online USD quoted spot crypto markets, excludes common fiat and stablecoin bases, ranks by 24 hour dollar turnover, and fetches recent candles for the top set.
 - **Local market data:** saves OHLCV candles to a SQLite database using only Python's standard library.
-- **Strategy comparison:** runs trend following and long only mean reversion against the same data and cost assumptions.
+- **Strategy comparison:** runs trend following, mean reversion, and an isolated 50-bar trend-filtered mean-reversion experiment against the same data and cost assumptions.
 - **Backtest mechanics:** decisions use completed candles only; fills occur at the next candle open; fees and adverse slippage are applied on both sides.
 - **Risk limits:** cash only, no leverage or shorting, maximum simulated position fraction, and maximum concurrent positions.
 - **Persistent paper ledger:** tracks virtual cash, marked equity, realized and unrealized P&L, holdings, and closed trades. It can replay candles one step at a time.
 - **AI-assisted paper experiment:** a separate `llama_regime` account asks local Llama to classify candidate coins' 15-minute market regime, then selects the trend baseline, mean-reversion baseline, or stays flat. Confidence, model errors, trade size, and risk caps are handled explicitly.
+- **Offline historical ML experiment:** an optional local scikit-learn model learns to score the next four-hour return after estimated costs. It is evaluated on later dates and is kept separate from paper decisions until evidence justifies a paper-only trial.
 
 There is no account connection, API key handling, live order endpoint, or real money execution code.
 
@@ -26,6 +27,13 @@ $python = Join-Path $env:LOCALAPPDATA 'Programs\Python\Python314\python.exe'
 & $python -m market_research --help
 ```
 
+To install the optional historical-model dependencies in the project environment:
+
+```powershell
+& $python -m venv .venv
+& .\.venv\Scripts\python.exe -m pip install -e ".[learning]"
+```
+
 ## First run
 
 Scan the automatically discovered USD crypto market, then fetch recent candles for the 30 highest-turnover pairs:
@@ -35,7 +43,7 @@ $env:PYTHONPATH = "$PWD\src"
 & $python -m market_research scan --interval 1440 --limit 30
 ```
 
-Rank stored instruments and compare the two daily strategy baselines:
+Rank stored instruments and compare the daily strategy rules, including the experimental trend filter:
 
 ```powershell
 & $python -m market_research universe --interval 1440
@@ -47,8 +55,10 @@ For forward paper trading, the active experiment uses 15-minute bars, checks Kra
 ```powershell
 & $python -m market_research paper start --interval 15 --cash 1000 --strategy trend --max-position-fraction 0.10 --max-positions 6
 & $python -m market_research paper start --interval 15 --cash 1000 --strategy mean_reversion --max-position-fraction 0.10 --max-positions 6
+& $python -m market_research paper start --interval 15 --cash 1000 --strategy mean_reversion_filtered --max-position-fraction 0.10 --max-positions 6
 & $python -m market_research paper watch --strategy trend --poll-seconds 300
 & $python -m market_research paper watch --strategy mean_reversion --poll-seconds 300
+& $python -m market_research paper watch --strategy mean_reversion_filtered --poll-seconds 300
 & $python -m market_research paper status --strategy mean_reversion
 ```
 
@@ -74,10 +84,23 @@ Open `http://127.0.0.1:8765/` in your browser. It shows each experiment's equity
 
 The historical research default is one day (1,440 minutes), allowing Kraken's recent-candle window to cover more history. The active paper experiment uses 15-minute bars and ranks the online USD crypto market before fetching the top 30 by 24-hour turnover. Kraken returns at most 720 bars, so 15-minute history covers about 7.5 days. For custom pairs, run `& $python -m market_research fetch --pairs BTC/USD ETH/USD --interval 1440` to fetch daily candles. `& $python -m market_research backtest --pairs BTC/USD ETH/USD --interval 1440` limits the comparison to those pairs.
 
+## Historical learning experiment
+
+The optional learning package is installed in the local `.venv`. With Kraken's full historical archive and quarterly update under `data/kraken_ohlcvt_archive/`, run:
+
+```powershell
+& .\.venv\Scripts\python.exe -m market_research learn
+```
+
+This streams the 15-minute USD crypto files into a separate local research database, adds new closed candles accumulated in `data/market_research.sqlite3`, ranks the top 30 by trailing turnover at each historical decision time, and builds features from completed candles. The target enters at the next 15-minute open and exits four hours later, after the configured fees and adverse slippage. It compares the trained model with cash, BTC buy-and-hold, trend following, and mean reversion on chronological 2025â€“2026 test periods, then repeats the paper results with doubled illustrative costs. The report, research database, and fitted model stay under ignored `data/`.
+
+Training is an explicit command; the running Llama model and paper accounts do not update their weights automatically. The paper watcher stores public closed candles, which can become training examples once a four-hour outcome is complete; paper P&L is tracked separately and is not a training label by itself. The fitted gradient-boosting candidate is an offline research artifact and is not connected to any account or order route. A positive backtest only qualifies a candidate for a later paper-only test; it cannot promise future profit.
+
 ## Initial strategy theories
 
 - **Trend following:** hold long when the simple moving average of the previous 10 closed bars is above the average of the previous 30 closed bars; otherwise exit.
 - **Mean reversion:** enter long when the previous close is at least 2 standard deviations below its 20 bar mean; exit when the price recovers to the rolling mean.
+- **Trend-filtered mean reversion (experimental):** apply the same mean-reversion entry and rolling-mean exit, but only open or keep positions while the latest completed close is above its 50-bar simple moving average. The filter is a separate paper candidate; its current historical sample remains negative on intraday bars and does not establish profitability. See `docs/STRATEGY_FILTER_EXPERIMENT_2026-11-01.md`.
 
 The systems are deliberately simple baseline theories, not claims of profitability. Both are long only. For simultaneous entry signals, the engine ranks signal strength and uses cash subject to the configured limits. It may leave cash idle and hold no assets.
 
@@ -87,4 +110,5 @@ Defaults are a $1,000 virtual balance, 26 basis points of fee per side, and 5 ba
 
 Kraken's public OHLC API returns at most 720 recent entries and includes a current uncommitted candle; historical scans and backtests drop that final candle, while the live paper watcher uses its last price only as an execution snapshot. The auto scanner ranks today's online USD spot markets. A historical backtest on today's universe can have survivorship and selection bias; it cannot establish historical universe membership. It also does not yet model partial fills, queue position, market impact, downtime, taxes, token transfer restrictions, or all venue fee tiers.
 
-Review `docs/ALGORITHM.md`, `docs/ARCHITECTURE.md`, `docs/LOCAL_AI.md`, `docs/INITIAL_CHECK.md`, and `docs/PAPER_RUN_CHECK_2026-11-01.md` before changing the research rules. The paper dashboard is served locally at `http://127.0.0.1:8765/` while its server is running.
+Review `docs/ALGORITHM.md`, `docs/ARCHITECTURE.md`, `docs/LOCAL_AI.md`, `docs/INITIAL_CHECK.md`, `docs/PAPER_RUN_CHECK_2026-11-01.md`, `docs/LEARNING_PLAN.md`, and `docs/HISTORICAL_MODEL_RESULTS_2026-11-01.md` before changing the research rules. The paper dashboard is served locally at `http://127.0.0.1:8765/` while its server is running.
+

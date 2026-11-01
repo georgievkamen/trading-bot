@@ -8,13 +8,13 @@ At each simulated candle, choose among a bounded, automatically discovered crypt
 
 1. Read Kraken's public market-pair catalog.
 2. Keep online spot pairs quoted in USD.
-3. Rank these pairs by 24-hour dollar turnover (`24h base volume × 24h VWAP`).
+3. Rank these pairs by 24-hour dollar turnover (`24h base volume Ã— 24h VWAP`).
 4. Fetch the configured number of top pairs, storing their closed OHLCV candles locally.
 5. Rank stored candidates by recent median dollar volume before strategy evaluation.
 
 The first cut uses current turnover to select today's candidate set. Historical backtests therefore have survivorship/selection bias; future work needs point-in-time universe membership before results can be interpreted as market-wide evidence.
 
-## Baseline A — trend following
+## Baseline A â€” trend following
 
 For an instrument with at least 30 completed bars, compute:
 
@@ -23,7 +23,7 @@ For an instrument with at least 30 completed bars, compute:
 
 Target long when `fast > slow`; otherwise target flat. Entry strength for cross-asset tie-breaking is `max(0, fast / slow - 1)`.
 
-## Baseline B — mean reversion
+## Baseline B â€” mean reversion
 
 For an instrument with at least 20 completed bars, compute the rolling mean `m` and population standard deviation `s` for the previous 20 closes. If `s > 0`, compute `z = (last_close - m) / s`.
 
@@ -31,15 +31,19 @@ For an instrument with at least 20 completed bars, compute the rolling mean `m` 
 - When long, remain long while the latest completed close is below the rolling mean; exit at/above the mean.
 - Entry strength is `max(0, -2 - z)`, the amount beyond the entry threshold.
 
+## Experiment C â€” trend-filtered mean reversion
+
+This separate paper candidate applies the Baseline B entry and exit rules only while the latest completed close is above its 50-bar simple moving average. It exits when the close falls to or below that filter. The recent stored-data check reduced short-sample intraday losses but remained negative; see `STRATEGY_FILTER_EXPERIMENT_2026-11-01.md`. It is not a validated profit signal and does not replace the baseline or local AI account.
+
 The strategy is long only; no margin, leverage, or shorting.
 
 ## Time and fill model
 
 For historical backtests and replay, a signal at candle timestamp `t` is calculated using bars strictly before `t`. Any change is filled at the open of bar `t`, with adverse slippage. The candle close is used only to mark equity after the simulated fill. This prevents same-close lookahead.
 
-Entry fill = `open × (1 + slippage_bps / 10,000)`.
+Entry fill = `open Ã— (1 + slippage_bps / 10,000)`.
 
-Exit fill = `open × (1 - slippage_bps / 10,000)`.
+Exit fill = `open Ã— (1 - slippage_bps / 10,000)`.
 
 Fees are charged on both entry and exit. Entry spend includes the entry fee; exit proceeds are net of the exit fee. Realized P&L is net exit proceeds minus total entry spend.
 
@@ -63,3 +67,4 @@ The core decision model is deterministic strategy code plus a deterministic simu
 ## Interpretation
 
 Compare both strategies on the same symbols, time interval, cash, fees, and slippage. Report total return, marked ending equity, maximum drawdown, closed trade count, win rate, and profit factor. A short sample, current top-turnover universe, and simplified fills are not enough to infer a durable edge. Add out-of-sample periods and cost sensitivity before using the result to make further project decisions.
+

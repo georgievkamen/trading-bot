@@ -44,7 +44,7 @@ def build_parser() -> argparse.ArgumentParser:
     universe = sub.add_parser("universe", help="Rank supplied pairs by recent dollar volume")
     universe.add_argument("--interval", type=int, default=1440)
 
-    backtest = sub.add_parser("backtest", help="Compare trend and mean-reversion baselines")
+    backtest = sub.add_parser("backtest", help="Compare trend, mean-reversion, and filtered experiments")
     backtest.add_argument("--pairs", nargs="+")
     backtest.add_argument("--interval", type=int, default=1440)
     backtest.add_argument("--cash", type=float, default=1000)
@@ -82,6 +82,14 @@ def build_parser() -> argparse.ArgumentParser:
     regime.add_argument("--interval", type=int, default=1440)
     regime.add_argument("--model", default="llama3.2:3b", help="Name of an installed local Ollama model (default: llama3.2:3b)")
 
+    learn = sub.add_parser("learn", help="Train and walk-forward evaluate the offline four-hour return model")
+    learn.add_argument("--full-archive", default="data/kraken_ohlcvt_archive/Kraken_OHLCVT_Full.zip")
+    learn.add_argument("--quarterly-archive", default="data/kraken_ohlcvt_archive/Kraken_OHLCVT_2026Q3.zip")
+    learn.add_argument("--live-db", default="data/market_research.sqlite3", help="Include newly accumulated closed candles from the local paper database")
+    learn.add_argument("--research-db", default="data/historical_learning.sqlite3")
+    learn.add_argument("--report", default="data/historical_learning_report.json")
+    learn.add_argument("--model-output", default="data/models/return_4h_hist_gradient.joblib")
+
     dashboard = sub.add_parser("dashboard", help="Open the local paper-trading dashboard")
     dashboard.add_argument("--host", default="127.0.0.1", choices=["127.0.0.1", "localhost"])
     dashboard.add_argument("--port", type=int, default=8765)
@@ -92,6 +100,20 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     store = MarketStore(args.db)
     try:
+        if args.command == "learn":
+            from .historical_learning import run_historical_learning
+
+            report = run_historical_learning(
+                full_archive=args.full_archive,
+                quarterly_archive=args.quarterly_archive,
+                live_db=args.live_db,
+                research_db=args.research_db,
+                report_path=args.report,
+                model_path=args.model_output,
+            )
+            print(json.dumps(report, indent=2, allow_nan=False))
+            return 0
+
         if args.command == "fetch":
             for pair in args.pairs:
                 candles = fetch_ohlc(pair, args.interval)
@@ -186,3 +208,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

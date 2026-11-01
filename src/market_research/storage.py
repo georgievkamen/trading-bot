@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from contextlib import contextmanager
 from collections import defaultdict
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -199,6 +199,7 @@ class MarketStore:
             "minimum_samples_per_regime": minimum_regime_samples,
             "by_regime": by_regime,
             "ready": bool(by_regime),
+            "status": "ready" if by_regime else "collecting_more_resolved_examples",
         }
 
     def clear_paper_state(self, account_id: str | None = None) -> None:

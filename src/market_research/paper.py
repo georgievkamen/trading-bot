@@ -243,7 +243,10 @@ def paper_summary(state: dict[str, Any]) -> dict[str, Any]:
         "realized_pnl": sum(float(t["pnl"]) for t in closed),
         "closed_trades": len(closed), "open_positions": open_positions,
         "trade_log": closed[-20:], "model_notes": state.get("model_notes", {}),
-        "learning_stats": state.get("learning_stats", {}),
+        "learning_stats": state.get("learning_stats", {
+            "resolved_samples": 0, "ready": False,
+            "status": "collecting_more_resolved_examples", "by_regime": {},
+        }),
     }
 
 

@@ -46,17 +46,17 @@ Fees are charged on both entry and exit. Entry spend includes the entry fee; exi
 ## Portfolio controls
 
 - Starting virtual cash: $1,000.
-- Historical backtests default to a maximum position size of 25% of marked equity per instrument; forward paper accounts default to 5% per entry to test smaller speculative allocations.
-- Maximum concurrent positions: four.
+- Historical backtests default to a maximum position size of 25% of marked equity per instrument; forward paper accounts default to 10% per entry and six concurrent positions, up to 60% of marked equity deployed.
+- Position allocation is an exposure limit, not a maximum-loss guarantee.
 - No borrowing: buys cannot exceed available cash.
 - For simultaneous eligible entries, rank signal strength descending, then pair name for deterministic tie-breaking.
 - Use an illustrative fee assumption of 26 basis points and slippage assumption of 5 basis points per side; both are CLI-configurable and must be calibrated to the venue and order style.
 - A portfolio can remain partly or fully in cash.
-- A paper account starts at the newest stored candle by default. `paper watch` polls the read-only market-data endpoint and simulates each new candle; `--replay-history` opts into replaying stored history.
+- The active paper setup uses 15-minute bars; `paper watch` polls the read-only market-data endpoint every five minutes and simulates each newly closed candle. A paper account starts at the newest stored candle by default; `--replay-history` opts into replaying stored history.
 
 ## Model role
 
-The core decision model is deterministic strategy code plus a deterministic simulator. An optional local language model can annotate a series as `trend`, `range`, `high_volatility`, or `unknown`. The LLM result is not currently consumed by strategy or allocation logic. It has no exchange credentials or order interface. The appropriate integration test later is an ablation: compare the exact same strategy, data, and cost assumptions with AI annotations disabled and enabled, then decide whether annotations add measurable research value.
+The core decision model is deterministic strategy code plus a deterministic simulator. A local language model classifies a series as `trend`, `range`, `high_volatility`, or `unknown`; the label selects between the two deterministic baselines or abstains. Low-confidence or unknown labels block new entries; high-volatility labels flatten simulated exposure. The model has no authority over sizing, portfolio caps, or fills, and has no exchange credentials or order interface. Measure its contribution through an ablation: compare the same data and costs with the regime switch and each fixed baseline.
 
 ## Interpretation
 

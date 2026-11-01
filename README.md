@@ -1,6 +1,6 @@
 # Autonomous Market Research — Core Engine
 
-This is the first implementation stage: research logic and simulation first, dashboard later. It compares two transparent crypto strategy baselines using public Kraken candles. All account balances, fills, and results are simulated.
+This local research system compares two transparent crypto strategy baselines using public Kraken candles, adds a constrained local-AI regime experiment, and includes a dashboard for paper-account monitoring. All account balances, fills, and results are simulated.
 
 ## What is implemented
 
@@ -10,7 +10,7 @@ This is the first implementation stage: research logic and simulation first, das
 - **Backtest mechanics:** decisions use completed candles only; fills occur at the next candle open; fees and adverse slippage are applied on both sides.
 - **Risk limits:** cash only, no leverage or shorting, maximum simulated position fraction, and maximum concurrent positions.
 - **Persistent paper ledger:** tracks virtual cash, marked equity, realized and unrealized P&L, holdings, and closed trades. It can replay candles one step at a time.
-- **AI-assisted paper experiment:** a separate `llama_regime` account asks local Llama to classify each coin's hourly market regime, then selects the trend baseline, mean-reversion baseline, or stays flat. Confidence, model errors, trade size, and risk caps are handled conservatively.
+- **AI-assisted paper experiment:** a separate `llama_regime` account asks local Llama to classify candidate coins' 15-minute market regime, then selects the trend baseline, mean-reversion baseline, or stays flat. Confidence, model errors, trade size, and risk caps are handled explicitly.
 
 There is no account connection, API key handling, live order endpoint, or real money execution code.
 
@@ -42,11 +42,11 @@ Rank stored instruments and compare the two daily strategy baselines:
 & $python -m market_research backtest --interval 1440 --cash 1000
 ```
 
-For forward paper trading, the active experiment uses hourly bars and a 5% maximum allocation per entry. It checks Kraken every five minutes, then makes a decision only after a new hourly candle closes. It starts from the latest stored candle; `--replay-history` opts into replaying the stored bars from the beginning. Start one separate $1,000 account per theory:
+For forward paper trading, the active experiment uses 15-minute bars, checks Kraken every five minutes, and can allocate up to 10% of marked account equity per entry with at most six open positions. It starts from the latest stored candle; `--replay-history` opts into replaying the stored bars from the beginning. Start one separate $1,000 account per theory:
 
 ```powershell
-& $python -m market_research paper start --interval 60 --cash 1000 --strategy trend --max-position-fraction 0.05
-& $python -m market_research paper start --interval 60 --cash 1000 --strategy mean_reversion --max-position-fraction 0.05
+& $python -m market_research paper start --interval 15 --cash 1000 --strategy trend --max-position-fraction 0.10 --max-positions 6
+& $python -m market_research paper start --interval 15 --cash 1000 --strategy mean_reversion --max-position-fraction 0.10 --max-positions 6
 & $python -m market_research paper watch --strategy trend --poll-seconds 300
 & $python -m market_research paper watch --strategy mean_reversion --poll-seconds 300
 & $python -m market_research paper status --strategy mean_reversion
@@ -55,7 +55,7 @@ For forward paper trading, the active experiment uses hourly bars and a 5% maxim
 After Ollama is running and `llama3.2:3b` is installed, start the AI-assisted account alongside the two controls:
 
 ```powershell
-& $python -m market_research paper start --interval 60 --cash 1000 --strategy llama_regime --model llama3.2:3b --max-position-fraction 0.05
+& $python -m market_research paper start --interval 15 --cash 1000 --strategy llama_regime --model llama3.2:3b --max-position-fraction 0.10 --max-positions 6
 & $python -m market_research paper watch --strategy llama_regime --poll-seconds 300
 & $python -m market_research paper status --strategy llama_regime
 ```
@@ -72,7 +72,7 @@ With the paper watchers running, start the dashboard server in another PowerShel
 
 Open `http://127.0.0.1:8765/` in your browser. It shows each experiment's equity, P&L, open positions, closed trades, feed heartbeat, and Llama regime notes. The page is served only on this computer and refreshes every 15 seconds. Stop the server with Ctrl+C.
 
-The historical research default is one day (1,440 minutes), allowing Kraken's recent-candle window to cover more history. The active paper experiment uses one-hour bars for more frequent decisions and ranks the full online USD crypto market before fetching the top 30 by 24-hour turnover. Kraken returns at most 720 bars, so hourly history covers about 30 days. For custom pairs, run `& $python -m market_research fetch --pairs BTC/USD ETH/USD --interval 1440` to fetch daily candles. `& $python -m market_research backtest --pairs BTC/USD ETH/USD --interval 1440` limits the comparison to those pairs.
+The historical research default is one day (1,440 minutes), allowing Kraken's recent-candle window to cover more history. The active paper experiment uses 15-minute bars and ranks the online USD crypto market before fetching the top 30 by 24-hour turnover. Kraken returns at most 720 bars, so 15-minute history covers about 7.5 days. For custom pairs, run `& $python -m market_research fetch --pairs BTC/USD ETH/USD --interval 1440` to fetch daily candles. `& $python -m market_research backtest --pairs BTC/USD ETH/USD --interval 1440` limits the comparison to those pairs.
 
 ## Initial strategy theories
 
@@ -81,11 +81,10 @@ The historical research default is one day (1,440 minutes), allowing Kraken's re
 
 The systems are deliberately simple baseline theories, not claims of profitability. Both are long only. For simultaneous entry signals, the engine ranks signal strength and uses cash subject to the configured limits. It may leave cash idle and hold no assets.
 
-Defaults are a $1,000 virtual balance, 26 basis points of fee per side, and 5 basis points of slippage per side. Historical backtests default to a 25% maximum position; paper accounts default to 5% per entry and at most four concurrent positions. Fee and slippage defaults are assumptions to adjust to the chosen venue and order style; they are not a guaranteed Kraken fee quote.
+Defaults are a $1,000 virtual balance, 26 basis points of fee per side, and 5 basis points of slippage per side. Historical backtests default to a 25% maximum position; paper accounts default to 10% per entry and at most six concurrent positions (up to 60% of marked equity deployed if every slot is filled). Fee and slippage defaults are assumptions to adjust to the chosen venue and order style; they are not a guaranteed Kraken fee quote. Position allocation is not a guaranteed loss limit.
 
 ## Evaluation limits
 
 Kraken's public OHLC API returns at most 720 recent entries and includes a current uncommitted candle; the fetcher drops that final candle. The auto scanner ranks today's online USD spot markets. A historical backtest on today's universe can have survivorship and selection bias; it cannot establish historical universe membership. It also does not yet model partial fills, queue position, market impact, downtime, taxes, token transfer restrictions, or all venue fee tiers.
 
-Review `docs/ALGORITHM.md`, `docs/ARCHITECTURE.md`, `docs/LOCAL_AI.md`, and `docs/INITIAL_CHECK.md` before changing the research rules. The dashboard remains a later step after the engine's accounting and evaluation workflow are established.
-
+Review `docs/ALGORITHM.md`, `docs/ARCHITECTURE.md`, `docs/LOCAL_AI.md`, and `docs/INITIAL_CHECK.md` before changing the research rules. The paper dashboard is served locally at `http://127.0.0.1:8765/` while its server is running.

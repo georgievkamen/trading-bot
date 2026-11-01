@@ -24,7 +24,7 @@ PAPER_STRATEGY_NAMES = (*STRATEGIES.keys(), "llama_regime")
 def start_paper_account(
     store: MarketStore, interval: int, pairs: list[str], strategy_name: str,
     starting_cash: float = 1000.0, costs: Costs = Costs(),
-    max_position_fraction: float = 0.25, max_positions: int = 4,
+    max_position_fraction: float = 0.10, max_positions: int = 6,
     replay_history: bool = False, model: str = LocalOllamaAdvisor.DEFAULT_MODEL,
 ) -> dict[str, Any]:
     if strategy_name not in PAPER_STRATEGY_NAMES:
@@ -119,6 +119,14 @@ def advance_paper_account(store: MarketStore, strategy_name: str) -> dict[str, A
         if pair in positions:
             continue
         history = data[pair][:index]
+        # Llama selects between these two deterministic baselines. If neither
+        # baseline has an entry signal, its label cannot create an entry, so
+        # skip an unnecessary local-model call for this pair.
+        if isinstance(strategy, LlamaRegimeSwitch) and not (
+            strategy.trend.desired_long(history, currently_long=False)
+            or strategy.mean_reversion.desired_long(history, currently_long=False)
+        ):
+            continue
         if strategy.desired_long(history, currently_long=False):
             strength = strategy.entry_strength(history)
             candidates.append((strength, pair, index))

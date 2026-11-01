@@ -2,7 +2,7 @@
 
 ## Data flow
 
-`Public venue data -> validation -> SQLite candle store -> universe ranking -> strategy signals -> deterministic simulator -> paper ledger and reports -> dashboard (later)`
+`Public venue data -> validation -> SQLite candle store -> universe ranking -> strategy signals -> deterministic simulator -> paper ledger and reports -> local dashboard`
 
 Market data, strategy definitions, persistence, and simulation are kept in separate modules. A later equity adapter can normalize data into the same candle contract, with exchange calendar and corporate action support added before it is considered comparable.
 

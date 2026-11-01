@@ -7,9 +7,9 @@ Check the local model's regime label with:
 ```powershell
 $env:PYTHONPATH = "$PWD\src"
 $python = Join-Path $env:LOCALAPPDATA 'Programs\Python\Python314\python.exe'
-& $python -m market_research regime BTC/USD --interval 60
+& $python -m market_research regime BTC/USD --interval 15
 ```
 
-The `llama_regime` paper strategy now lets the model choose which deterministic baseline to apply: `trend` selects the 10/30 moving-average rule, `range` selects the 20-bar mean-reversion rule, and `high_volatility` exits and blocks entries. Low-confidence/unknown labels block new entries and keep existing positions unchanged; an unavailable local model fails closed by exiting simulated positions. The 5% paper allocation cap, 4-position limit, fees, and slippage remain deterministic. The LLM cannot choose size or bypass risk controls.
+The `llama_regime` paper strategy now lets the model choose which deterministic baseline to apply: `trend` selects the 10/30 moving-average rule, `range` selects the 20-bar mean-reversion rule, and `high_volatility` exits and blocks entries. Low-confidence/unknown labels block new entries and keep existing positions unchanged; an unavailable local model fails closed by exiting simulated positions. The 10% paper allocation cap, six-position limit, fees, and slippage remain deterministic. The LLM cannot choose size or bypass risk controls. It uses 15-minute candles and classifies only when a baseline has an entry signal or a held position needs an exit decision, to keep local inference load bounded.
 
 Compare this forward AI-assisted account with the independent `trend` and `mean_reversion` paper accounts. The current historical backtest covers only deterministic baselines; do not treat LLM classifications generated today as historical evidence. Llama may misclassify regimes and is not a reliable standalone price predictor. Require longer out-of-sample paper results before claiming improvement.

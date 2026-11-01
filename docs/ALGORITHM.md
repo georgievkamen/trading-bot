@@ -35,13 +35,15 @@ The strategy is long only; no margin, leverage, or shorting.
 
 ## Time and fill model
 
-At candle timestamp `t`, a signal is calculated using bars strictly before `t`. Any change is filled at the open of bar `t`, with adverse slippage. The candle close is used only to mark equity after the simulated fill. This prevents same-close lookahead.
+For historical backtests and replay, a signal at candle timestamp `t` is calculated using bars strictly before `t`. Any change is filled at the open of bar `t`, with adverse slippage. The candle close is used only to mark equity after the simulated fill. This prevents same-close lookahead.
 
 Entry fill = `open × (1 + slippage_bps / 10,000)`.
 
 Exit fill = `open × (1 - slippage_bps / 10,000)`.
 
 Fees are charged on both entry and exit. Entry spend includes the entry fee; exit proceeds are net of the exit fee. Realized P&L is net exit proceeds minus total entry spend.
+
+The live paper watcher waits for a newly completed signal bar, then uses the current forming candle's public last price as its execution-price snapshot and applies adverse slippage and fees. It does not use the completed signal bar's historical open as a fill. If it cannot fetch a current price for a pair, it skips that pair's action for the latest event; marks refresh on every poll.
 
 ## Portfolio controls
 

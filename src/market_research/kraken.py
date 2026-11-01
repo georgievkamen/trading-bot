@@ -71,8 +71,10 @@ def discover_usd_spot_pairs(limit: int = 10) -> list[dict[str, object]]:
     return ranked[:limit]
 
 
-def fetch_ohlc(pair: str, interval: int = 60, timeout: int = 20) -> list[Candle]:
-    """Fetch recent public Kraken Spot candles; no account/API key is used."""
+def fetch_ohlc(
+    pair: str, interval: int = 60, timeout: int = 20, include_current: bool = False,
+) -> list[Candle]:
+    """Fetch public Kraken candles; optionally include the still-forming latest bar."""
     query = urlencode({"pair": pair, "interval": interval, "assetVersion": 1})
     request = Request(
         f"{BASE_URL}?{query}",
@@ -91,12 +93,14 @@ def fetch_ohlc(pair: str, interval: int = 60, timeout: int = 20) -> list[Candle]
     if len(raw_rows) < 2:
         raise RuntimeError(f"Not enough OHLC data returned for {pair}")
 
-    # Kraken always includes the current, not-yet-committed candle; discard it.
+    # Historical scans and backtests discard the uncommitted bar. The live
+    # paper watcher may read its current close as a public last-price snapshot.
+    rows = raw_rows if include_current else raw_rows[:-1]
     return [
         Candle(
             pair=pair.upper(), interval=interval, timestamp=int(row[0]),
             open=float(row[1]), high=float(row[2]), low=float(row[3]),
             close=float(row[4]), volume=float(row[6]),
         )
-        for row in raw_rows[:-1]
+        for row in rows
     ]

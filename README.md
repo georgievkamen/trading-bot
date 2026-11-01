@@ -60,7 +60,7 @@ After Ollama is running and `llama3.2:3b` is installed, start the AI-assisted ac
 & $python -m market_research paper status --strategy llama_regime
 ```
 
-`paper watch` refreshes public candles and automatically simulates entries/exits whenever a new closed bar is available. It runs until stopped with Ctrl+C. The AI account uses Llama only to label market regime; the deterministic risk limits and simulated fills remain in control. No live order route exists. `paper step` manually advances one stored bar. `paper start` resets only that strategy's account. `paper reset` clears all accounts; add `--strategy` to clear one. The local database and paper balances are saved under `data/` in this project folder.
+`paper watch` refreshes public candles and automatically simulates entries/exits whenever a new closed signal bar is available. Forward watcher fills use the current public last price with adverse slippage, not the completed bar's historical open; if the current price is unavailable, it skips that pair's action. Marks refresh every five minutes. It runs until stopped with Ctrl+C. The AI account uses Llama to select a deterministic baseline; risk limits and simulated fills remain in the engine. No live order route exists. `paper step` manually advances one stored bar using next-bar-open replay. `paper start` resets only that strategy's account. `paper reset` clears all accounts; add `--strategy` to clear one. The local database and paper balances are saved under `data/` in this project folder.
 
 ## Local dashboard
 
@@ -85,6 +85,6 @@ Defaults are a $1,000 virtual balance, 26 basis points of fee per side, and 5 ba
 
 ## Evaluation limits
 
-Kraken's public OHLC API returns at most 720 recent entries and includes a current uncommitted candle; the fetcher drops that final candle. The auto scanner ranks today's online USD spot markets. A historical backtest on today's universe can have survivorship and selection bias; it cannot establish historical universe membership. It also does not yet model partial fills, queue position, market impact, downtime, taxes, token transfer restrictions, or all venue fee tiers.
+Kraken's public OHLC API returns at most 720 recent entries and includes a current uncommitted candle; historical scans and backtests drop that final candle, while the live paper watcher uses its last price only as an execution snapshot. The auto scanner ranks today's online USD spot markets. A historical backtest on today's universe can have survivorship and selection bias; it cannot establish historical universe membership. It also does not yet model partial fills, queue position, market impact, downtime, taxes, token transfer restrictions, or all venue fee tiers.
 
-Review `docs/ALGORITHM.md`, `docs/ARCHITECTURE.md`, `docs/LOCAL_AI.md`, and `docs/INITIAL_CHECK.md` before changing the research rules. The paper dashboard is served locally at `http://127.0.0.1:8765/` while its server is running.
+Review `docs/ALGORITHM.md`, `docs/ARCHITECTURE.md`, `docs/LOCAL_AI.md`, `docs/INITIAL_CHECK.md`, and `docs/PAPER_RUN_CHECK_2026-11-01.md` before changing the research rules. The paper dashboard is served locally at `http://127.0.0.1:8765/` while its server is running.

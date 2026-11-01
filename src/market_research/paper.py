@@ -67,7 +67,9 @@ def start_paper_account(
     return state
 
 
-def advance_paper_account(store: MarketStore, strategy_name: str) -> dict[str, Any]:
+def advance_paper_account(
+    store: MarketStore, strategy_name: str, live_prices: dict[str, float] | None = None,
+) -> dict[str, Any]:
     state = store.get_paper_state(strategy_name)
     if not state or not state.get("active"):
         raise ValueError("No active paper account. Start one first.")
@@ -81,6 +83,8 @@ def advance_paper_account(store: MarketStore, strategy_name: str) -> dict[str, A
         raise NoNewCandles("No newer closed candles are stored. Waiting for the next candle.")
 
     timestamp = min(events)
+    newest_timestamp = max(events)
+    use_live_prices = live_prices is not None and timestamp == newest_timestamp
     rows = sorted(events[timestamp], key=lambda item: item[0])
     strategy_name = str(state["strategy"])
     strategy: Strategy = (
@@ -95,15 +99,22 @@ def advance_paper_account(store: MarketStore, strategy_name: str) -> dict[str, A
     cash = float(state["cash"])
 
     for pair, index in rows:
-        marks[pair] = data[pair][index].open
+        if use_live_prices:
+            if pair in live_prices:
+                marks[pair] = float(live_prices[pair])
+        else:
+            marks[pair] = data[pair][index].open
 
     # Close first so the same completed bar can release simulated cash.
     for pair, index in rows:
         position = positions.get(pair)
         if not position:
             continue
+        if use_live_prices and pair not in live_prices:
+            continue
         if not strategy.desired_long(data[pair][:index], currently_long=True):
-            fill = data[pair][index].open * (1 - slip_rate)
+            base_price = float(live_prices[pair]) if use_live_prices else data[pair][index].open
+            fill = base_price * (1 - slip_rate)
             proceeds = float(position["quantity"]) * fill * (1 - fee_rate)
             cash += proceeds
             trade = open_trades.pop(pair)
@@ -117,6 +128,8 @@ def advance_paper_account(store: MarketStore, strategy_name: str) -> dict[str, A
     candidates: list[tuple[float, str, int]] = []
     for pair, index in rows:
         if pair in positions:
+            continue
+        if use_live_prices and pair not in live_prices:
             continue
         history = data[pair][:index]
         # Llama selects between these two deterministic baselines. If neither
@@ -134,7 +147,8 @@ def advance_paper_account(store: MarketStore, strategy_name: str) -> dict[str, A
     for _, pair, index in candidates:
         if len(positions) >= int(state["max_positions"]) or cash <= 0:
             break
-        fill = data[pair][index].open * (1 + slip_rate)
+        base_price = float(live_prices[pair]) if use_live_prices else data[pair][index].open
+        fill = base_price * (1 + slip_rate)
         equity = cash + sum(float(p["quantity"]) * float(marks.get(name, p["entry_price"])) for name, p in positions.items())
         budget = min(cash, equity * float(state["max_position_fraction"]))
         quantity = budget / (fill * (1 + fee_rate))
@@ -155,7 +169,9 @@ def advance_paper_account(store: MarketStore, strategy_name: str) -> dict[str, A
     # After executing at this bar's open, mark to this bar's closed price.
     for pair, bars in data.items():
         eligible = [bar.close for bar in bars if bar.timestamp <= timestamp]
-        if eligible:
+        if use_live_prices and pair in live_prices:
+            marks[pair] = float(live_prices[pair])
+        elif eligible:
             marks[pair] = eligible[-1]
     equity = cash + sum(float(p["quantity"]) * float(marks.get(pair, p["entry_price"])) for pair, p in positions.items())
     state["cash"] = cash
@@ -205,9 +221,13 @@ def watch_paper_account(
 
     while True:
         feed_errors: list[dict[str, str]] = []
+        live_prices: dict[str, float] = {}
         for pair in pairs:
             try:
-                store.save_candles(fetch_ohlc(pair, interval))
+                candles = fetch_ohlc(pair, interval, include_current=True)
+                if candles:
+                    store.save_candles(candles[:-1])
+                    live_prices[pair] = candles[-1].close
             except Exception as exc:
                 feed_errors.append({"pair": pair, "error": str(exc)})
                 print(json.dumps({"pair": pair, "data_error": str(exc)}), flush=True)
@@ -215,10 +235,11 @@ def watch_paper_account(
         if current and current.get("active"):
             current["last_check_timestamp"] = int(time.time())
             current["feed_errors"] = feed_errors
+            current.setdefault("last_marks", {}).update(live_prices)
             store.save_paper_state(current, strategy_name)
         while True:
             try:
-                snapshot = advance_paper_account(store, strategy_name)
+                snapshot = advance_paper_account(store, strategy_name, live_prices)
                 print(json.dumps(snapshot, allow_nan=False), flush=True)
             except NoNewCandles:
                 break

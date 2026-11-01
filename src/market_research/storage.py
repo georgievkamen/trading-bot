@@ -147,7 +147,15 @@ class MarketStore:
                     continue
                 entry = bars[index + 1]
                 outcome = bars[index + horizon_bars]
-                if outcome.timestamp > as_of_timestamp or entry.open <= 0 or outcome.close <= 0:
+                expected_entry = int(decision_timestamp) + interval_minutes * 60
+                expected_outcome = int(decision_timestamp) + horizon_minutes * 60
+                if (
+                    entry.timestamp != expected_entry
+                    or outcome.timestamp != expected_outcome
+                    or outcome.timestamp > as_of_timestamp
+                    or entry.open <= 0
+                    or outcome.close <= 0
+                ):
                     continue
                 entry_fill = entry.open * (1 + slippage_rate)
                 exit_fill = outcome.close * (1 - slippage_rate)

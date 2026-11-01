@@ -63,7 +63,7 @@ class LocalOllamaAdvisor:
         ]
         feedback_context = learning_feedback or {
             "ready": False,
-            "status": "Need at least 25 resolved four-hour outcomes per regime before using performance feedback.",
+            "status": "Need at least 25 distinct four-hour windows per regime before using performance feedback; same-window coin outcomes count as one sample.",
         }
         prompt = (
             "Classify this market snapshot as trend, range, high_volatility, or unknown. "

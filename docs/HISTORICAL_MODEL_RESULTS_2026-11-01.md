@@ -6,7 +6,7 @@ The first learned four-hour return model did **not** pass the paper-trial gate. 
 
 ## Experiment
 
-- Source: Kraken's full OHLCVT archive through June 2026 plus the Q3 2026 update.
+- Source: Kraken's full OHLCVT archive through June 2026 plus the Q3 2026 update. The final offline fit also included 21,690 closed 15-minute candles saved by the local paper watcher through 2026-11-01; those forward candles did not enter the fixed 2025–2026 walk-forward test windows.
 - Universe: 588 USD-quoted crypto markets with usable history; at each decision time the simulator ranks the point-in-time top 30 by trailing 24-hour dollar turnover.
 - Target: enter at the next 15-minute open and exit 16 bars later, exactly four hours after entry. Fees and adverse slippage apply at both ends.
 - Model: local scikit-learn histogram gradient-boosting regressor, 15 price/volume/BTC-relative features. This is separate from Ollama/Llama and does not change Llama weights.

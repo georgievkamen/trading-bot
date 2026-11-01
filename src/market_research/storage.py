@@ -5,6 +5,7 @@ import sqlite3
 from collections import defaultdict
 from contextlib import contextmanager
 from pathlib import Path
+from statistics import fmean, median
 from typing import Any, Iterator
 
 from .models import Candle
@@ -175,28 +176,44 @@ class MarketStore:
         minimum_regime_samples: int = 25,
         max_samples: int = 2000,
     ) -> dict[str, Any]:
-        """Summarize resolved outcomes visible at this simulated time, with a minimum sample gate."""
+        """Summarize outcomes with distinct four-hour windows as samples.
+
+        Coin outcomes from the same window are correlated, so they are
+        collapsed to one median return per regime and window before applying
+        the minimum sample gate.
+        """
         with self.connect() as db:
-            rows = db.execute("""SELECT regime, net_return_pct FROM ai_observations
+            rows = db.execute("""SELECT decision_timestamp, regime, net_return_pct FROM ai_observations
                 WHERE state_id=? AND resolved_timestamp IS NOT NULL AND resolved_timestamp <= ?
                 ORDER BY resolved_timestamp DESC LIMIT ?""",
                 (state_id, as_of_timestamp, max_samples)).fetchall()
-        grouped: dict[str, list[float]] = defaultdict(list)
-        for regime, net_return_pct in rows:
-            grouped[str(regime)].append(float(net_return_pct))
+        horizon_seconds = 4 * 60 * 60
+        grouped: dict[str, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
+        all_windows: set[int] = set()
+        for decision_timestamp, regime, net_return_pct in rows:
+            window = int(decision_timestamp) // horizon_seconds
+            all_windows.add(window)
+            grouped[str(regime)][window].append(float(net_return_pct))
         by_regime = {}
-        for regime, results in grouped.items():
+        for regime, windows in grouped.items():
+            # Each window contributes one robust cross-sectional result,
+            # regardless of how many coins received the same regime label.
+            results = [median(window_results) for window_results in windows.values()]
             if len(results) < minimum_regime_samples:
                 continue
             by_regime[regime] = {
                 "samples": len(results),
-                "mean_4h_net_return_pct": round(sum(results) / len(results), 4),
+                "asset_observations": sum(len(window_results) for window_results in windows.values()),
+                "mean_4h_net_return_pct": round(fmean(results), 4),
+                "median_4h_net_return_pct": round(median(results), 4),
                 "win_rate_pct": round(sum(result > 0 for result in results) / len(results) * 100, 2),
             }
         return {
             "target": "next_4h_long_return_after_fees_and_slippage",
             "resolved_samples": len(rows),
+            "independent_windows": len(all_windows),
             "minimum_samples_per_regime": minimum_regime_samples,
+            "sample_unit": "distinct 4-hour windows; per-window asset outcomes are aggregated by median",
             "by_regime": by_regime,
             "ready": bool(by_regime),
             "status": "ready" if by_regime else "collecting_more_resolved_examples",

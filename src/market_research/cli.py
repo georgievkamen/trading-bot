@@ -44,7 +44,7 @@ def build_parser() -> argparse.ArgumentParser:
     universe = sub.add_parser("universe", help="Rank supplied pairs by recent dollar volume")
     universe.add_argument("--interval", type=int, default=1440)
 
-    backtest = sub.add_parser("backtest", help="Compare trend and mean-reversion baselines")
+    backtest = sub.add_parser("backtest", help="Compare trend, mean-reversion, and filtered experiments")
     backtest.add_argument("--pairs", nargs="+")
     backtest.add_argument("--interval", type=int, default=1440)
     backtest.add_argument("--cash", type=float, default=1000)
@@ -208,3 +208,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

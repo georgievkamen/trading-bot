@@ -100,8 +100,18 @@ def advance_paper_account(
         and index == len(data.get(pair, []))
     }
     strategy_name = str(state["strategy"])
+    learning_feedback: dict[str, Any] | None = None
+    if strategy_name == "llama_regime":
+        store.resolve_ai_observations(
+            strategy_name, data, timestamp, int(state["interval"]),
+            float(state["fee_bps"]), float(state["slippage_bps"]),
+        )
+        learning_feedback = store.get_ai_feedback(strategy_name, timestamp)
     strategy: Strategy = (
-        LlamaRegimeSwitch(str(state.get("model") or LocalOllamaAdvisor.DEFAULT_MODEL))
+        LlamaRegimeSwitch(
+            str(state.get("model") or LocalOllamaAdvisor.DEFAULT_MODEL),
+            learning_feedback=learning_feedback,
+        )
         if strategy_name == "llama_regime" else STRATEGIES[strategy_name]
     )
     fee_rate = float(state["fee_bps"]) / 10_000
@@ -191,7 +201,22 @@ def advance_paper_account(
     state["cash"] = cash
     state["cursor"] = timestamp
     if isinstance(strategy, LlamaRegimeSwitch):
-        state["model_notes"] = strategy.notes
+        notes = strategy.notes
+        state["model_notes"] = notes
+        observations = [
+            {
+                "pair": pair,
+                "decision_timestamp": note["decision_timestamp"],
+                "close": note["decision_close"],
+                "regime": note.get("predicted_regime", note["regime"]),
+                "confidence": note["confidence"],
+                "news": note.get("news", []),
+            }
+            for pair, note in notes.items()
+            if "decision_timestamp" in note and "decision_close" in note
+        ]
+        store.record_ai_observations(strategy_name, observations)
+        state["learning_stats"] = store.get_ai_feedback(strategy_name, timestamp)
     state["equity_curve"].append({"timestamp": timestamp, "equity": equity})
     store.save_paper_state(state, strategy_name)
     return paper_summary(state)
@@ -218,6 +243,10 @@ def paper_summary(state: dict[str, Any]) -> dict[str, Any]:
         "realized_pnl": sum(float(t["pnl"]) for t in closed),
         "closed_trades": len(closed), "open_positions": open_positions,
         "trade_log": closed[-20:], "model_notes": state.get("model_notes", {}),
+        "learning_stats": state.get("learning_stats", {
+            "resolved_samples": 0, "ready": False,
+            "status": "collecting_more_resolved_examples", "by_regime": {},
+        }),
     }
 
 

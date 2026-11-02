@@ -53,14 +53,14 @@ Rank stored instruments and compare the daily strategy rules, including the expe
 The selected active paper experiment uses **Llama only** on 15-minute bars. It checks Kraken every five minutes, starts from the latest stored candle, and can allocate up to 10% of marked account equity per entry with at most six open positions. Start the $1,000 virtual account once, then run its watcher:
 
 ```powershell
-& $python -m market_research paper start --interval 15 --cash 1000 --strategy llama_regime --model llama3.2:3b --max-position-fraction 0.10 --max-positions 6
+& $python -m market_research paper start --interval 15 --cash 1000 --strategy llama_regime --model llama3.1:8b-instruct-q4_K_M --max-position-fraction 0.10 --max-positions 6
 & $python -m market_research paper watch --strategy llama_regime --poll-seconds 300
 & $python -m market_research paper status --strategy llama_regime
 ```
 
 The separate trend and mean-reversion accounts are optional controls; they are not part of the selected active run. Their saved history can be retained without running their watchers. `paper start` resets only the named strategy's account, so do not repeat it when you mean to resume an existing account.
 
-`paper watch` refreshes public candles and automatically simulates entries/exits whenever a new closed signal bar is available. Forward watcher fills use the current public last price with adverse slippage, not the completed bar's historical open; if the current price is unavailable, it skips that pair's action. Marks refresh every five minutes. The AI account uses Llama to select a deterministic baseline; risk limits and simulated fills remain in the engine. No live order route exists. `paper step` manually advances one stored bar using next-bar-open replay. `paper reset` clears all accounts; add `--strategy` to clear one. The local database and paper balances are saved under `data/` in this project folder.
+`paper watch` refreshes public candles and automatically simulates entries/exits when a new live candle snapshot is available. It fetches markets concurrently, records each fetch time, and only combines prices from the same candle bucket fetched within 30 seconds of one another; older snapshots are excluded and reported. Forward watcher fills use the current public last price with adverse slippage, not a completed bar's historical open. If the watcher was stopped, the default mode skips missed candle events and resumes at current public prices, recording the gap in the account state. `--replay-missed-history` explicitly opts into historical catch-up fills and is intended only for deliberate replay experiments. The dashboard reports successful, failed, and snapshot-excluded markets separately; a partial feed error no longer marks the whole watcher offline. The Llama account batches eligible markets in groups of three to reduce sequential CPU inference time; it uses Llama to select a deterministic baseline, while risk limits and simulated fills remain in the engine. This improves cadence, not expected returns. No live order route exists. `paper step` manually advances one stored bar using next-bar-open replay. `paper reset` clears all accounts; add `--strategy` to clear one. The local database and paper balances are saved under `data/` in this project folder.
 
 ## Local dashboard
 

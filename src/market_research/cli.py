@@ -59,7 +59,7 @@ def build_parser() -> argparse.ArgumentParser:
     start.add_argument("--pairs", nargs="+", help="Optional subset; otherwise use all stored/scanned pairs")
     start.add_argument("--interval", type=int, default=15)
     start.add_argument("--strategy", choices=PAPER_STRATEGY_NAMES, default="trend")
-    start.add_argument("--model", default="llama3.2:3b", help="Local Ollama model for llama_regime paper account")
+    start.add_argument("--model", default=LocalOllamaAdvisor.DEFAULT_MODEL, help="Local Ollama model for llama_regime paper account")
     start.add_argument("--cash", type=float, default=1000)
     start.add_argument("--fee-bps", type=float, default=26)
     start.add_argument("--slippage-bps", type=float, default=5)
@@ -72,6 +72,10 @@ def build_parser() -> argparse.ArgumentParser:
     watch.add_argument("--strategy", choices=PAPER_STRATEGY_NAMES, default="trend")
     watch.add_argument("--poll-seconds", type=int, default=300)
     watch.add_argument("--once", action="store_true", help="Fetch/process once, then exit")
+    watch.add_argument(
+        "--replay-missed-history", action="store_true",
+        help="Explicitly replay candles missed while stopped, using historical opens",
+    )
     status = paper_sub.add_parser("status", help="Show paper balance, P&L, positions, and recent trades")
     status.add_argument("--strategy", choices=PAPER_STRATEGY_NAMES, default="trend")
     reset = paper_sub.add_parser("reset", help="Clear one or both paper accounts")
@@ -80,7 +84,7 @@ def build_parser() -> argparse.ArgumentParser:
     regime = sub.add_parser("regime", help="Optional local Ollama market-regime annotation")
     regime.add_argument("pair")
     regime.add_argument("--interval", type=int, default=1440)
-    regime.add_argument("--model", default="llama3.2:3b", help="Name of an installed local Ollama model (default: llama3.2:3b)")
+    regime.add_argument("--model", default=LocalOllamaAdvisor.DEFAULT_MODEL, help="Name of an installed local Ollama model (default: llama3.1:8b-instruct-q4_K_M)")
 
     learn = sub.add_parser("learn", help="Train and walk-forward evaluate the offline four-hour return model")
     learn.add_argument("--full-archive", default="data/kraken_ohlcvt_archive/Kraken_OHLCVT_Full.zip")
@@ -176,7 +180,10 @@ def main(argv: list[str] | None = None) -> int:
                 print(json.dumps(advance_paper_account(store, args.strategy), indent=2, allow_nan=False))
             elif args.paper_action == "watch":
                 try:
-                    watch_paper_account(store, args.strategy, args.poll_seconds, args.once)
+                    watch_paper_account(
+                        store, args.strategy, args.poll_seconds, args.once,
+                        replay_missed_history=args.replay_missed_history,
+                    )
                 except KeyboardInterrupt:
                     print("Paper watch stopped.")
             elif args.paper_action == "status":
@@ -208,4 +215,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

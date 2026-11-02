@@ -8,13 +8,13 @@ At each simulated candle, choose among a bounded, automatically discovered crypt
 
 1. Read Kraken's public market-pair catalog.
 2. Keep online spot pairs quoted in USD.
-3. Rank these pairs by 24-hour dollar turnover (`24h base volume Ã— 24h VWAP`).
+3. Rank these pairs by 24-hour dollar turnover (`24h base volume × 24h VWAP`).
 4. Fetch the configured number of top pairs, storing their closed OHLCV candles locally.
 5. Rank stored candidates by recent median dollar volume before strategy evaluation.
 
 The first cut uses current turnover to select today's candidate set. Historical backtests therefore have survivorship/selection bias; future work needs point-in-time universe membership before results can be interpreted as market-wide evidence.
 
-## Baseline A â€” trend following
+## Baseline A — trend following
 
 For an instrument with at least 30 completed bars, compute:
 
@@ -23,7 +23,7 @@ For an instrument with at least 30 completed bars, compute:
 
 Target long when `fast > slow`; otherwise target flat. Entry strength for cross-asset tie-breaking is `max(0, fast / slow - 1)`.
 
-## Baseline B â€” mean reversion
+## Baseline B — mean reversion
 
 For an instrument with at least 20 completed bars, compute the rolling mean `m` and population standard deviation `s` for the previous 20 closes. If `s > 0`, compute `z = (last_close - m) / s`.
 
@@ -31,7 +31,7 @@ For an instrument with at least 20 completed bars, compute the rolling mean `m` 
 - When long, remain long while the latest completed close is below the rolling mean; exit at/above the mean.
 - Entry strength is `max(0, -2 - z)`, the amount beyond the entry threshold.
 
-## Experiment C â€” trend-filtered mean reversion
+## Experiment C — trend-filtered mean reversion
 
 This separate paper candidate applies the Baseline B entry and exit rules only while the latest completed close is above its 50-bar simple moving average. It exits when the close falls to or below that filter. The recent stored-data check reduced short-sample intraday losses but remained negative; see `STRATEGY_FILTER_EXPERIMENT_2026-11-01.md`. It is not a validated profit signal and does not replace the baseline or local AI account.
 
@@ -41,13 +41,13 @@ The strategy is long only; no margin, leverage, or shorting.
 
 For historical backtests and replay, a signal at candle timestamp `t` is calculated using bars strictly before `t`. Any change is filled at the open of bar `t`, with adverse slippage. The candle close is used only to mark equity after the simulated fill. This prevents same-close lookahead.
 
-Entry fill = `open Ã— (1 + slippage_bps / 10,000)`.
+Entry fill = `open × (1 + slippage_bps / 10,000)`.
 
-Exit fill = `open Ã— (1 - slippage_bps / 10,000)`.
+Exit fill = `open × (1 - slippage_bps / 10,000)`.
 
 Fees are charged on both entry and exit. Entry spend includes the entry fee; exit proceeds are net of the exit fee. Realized P&L is net exit proceeds minus total entry spend.
 
-The live paper watcher waits for a newly completed signal bar, then uses the current forming candle's public last price as its execution-price snapshot and applies adverse slippage and fees. It does not use the completed signal bar's historical open as a fill. If it cannot fetch a current price for a pair, it skips that pair's action for the latest event; marks refresh on every poll.
+The live paper watcher uses the current forming candle's public last price as its execution-price snapshot and applies adverse slippage and fees. Each snapshot records its actual fetch time. A poll processes only prices from the same candle bucket whose fetch times are within 30 seconds; out-of-bucket or older snapshots are excluded and counted. When the watcher resumes after downtime, it skips missed candle events and trades only from the newest live snapshot, recording the gap. `paper watch --replay-missed-history` explicitly enables historical catch-up fills for deliberate replay experiments. A missing current price skips that pair's action; marks refresh on every poll.
 
 ## Portfolio controls
 
@@ -58,13 +58,12 @@ The live paper watcher waits for a newly completed signal bar, then uses the cur
 - For simultaneous eligible entries, rank signal strength descending, then pair name for deterministic tie-breaking.
 - Use an illustrative fee assumption of 26 basis points and slippage assumption of 5 basis points per side; both are CLI-configurable and must be calibrated to the venue and order style.
 - A portfolio can remain partly or fully in cash.
-- The active paper setup uses 15-minute bars; `paper watch` polls the read-only market-data endpoint every five minutes and simulates each newly closed candle. A paper account starts at the newest stored candle by default; `--replay-history` opts into replaying stored history.
+- The active paper setup uses 15-minute bars; `paper watch` polls the read-only market-data endpoint every five minutes and uses forward-only snapshots by default. A paper account starts at the newest stored candle by default; `--replay-history` opts into replaying stored history at account creation, and `paper watch --replay-missed-history` explicitly opts into catch-up replay after the watcher has been stopped.
 
 ## Model role
 
-The core decision model is deterministic strategy code plus a deterministic simulator. A local language model classifies a series as `trend`, `range`, `high_volatility`, or `unknown`; the label selects between the two deterministic baselines or abstains. Low-confidence or unknown labels block new entries; high-volatility labels flatten simulated exposure. The model has no authority over sizing, portfolio caps, or fills, and has no exchange credentials or order interface. Measure its contribution through an ablation: compare the same data and costs with the regime switch and each fixed baseline.
+The core decision model is deterministic strategy code plus a deterministic simulator. A local language model classifies a series as `trend`, `range`, `high_volatility`, or `unknown`; the label selects between the two deterministic baselines or abstains. Eligible markets are sent in batches of three per local-model request to balance CPU throughput and response reliability. Low-confidence or unknown labels block new entries; high-volatility labels flatten simulated exposure. The model has no authority over sizing, portfolio caps, or fills, and has no exchange credentials or order interface. Measure its contribution through an ablation: compare the same data and costs with the regime switch and each fixed baseline.
 
 ## Interpretation
 
 Compare both strategies on the same symbols, time interval, cash, fees, and slippage. Report total return, marked ending equity, maximum drawdown, closed trade count, win rate, and profit factor. A short sample, current top-turnover universe, and simplified fills are not enough to infer a durable edge. Add out-of-sample periods and cost sensitivity before using the result to make further project decisions.
-

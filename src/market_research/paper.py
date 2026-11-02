@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
+from dataclasses import dataclass
 import json
 import time
 from typing import Any
@@ -18,7 +20,17 @@ class NoNewCandles(ValueError):
     pass
 
 
+@dataclass(frozen=True, slots=True)
+class LiveSnapshot:
+    """A live price together with both its candle bucket and actual fetch time."""
+
+    candle_timestamp: int
+    price: float
+    fetched_at: float
+
+
 PAPER_STRATEGY_NAMES = (*STRATEGIES.keys(), "llama_regime")
+LIVE_SNAPSHOT_MAX_SKEW_SECONDS = 30
 
 
 def start_paper_account(
@@ -69,34 +81,44 @@ def start_paper_account(
 
 def advance_paper_account(
     store: MarketStore, strategy_name: str,
-    live_ticks: dict[str, tuple[int, float]] | None = None,
+    live_ticks: dict[str, LiveSnapshot] | None = None,
+    *, live_only: bool = False,
 ) -> dict[str, Any]:
     state = store.get_paper_state(strategy_name)
     if not state or not state.get("active"):
         raise ValueError("No active paper account. Start one first.")
     data = store.get_candles(int(state["interval"]), list(state["pairs"]))
     events: dict[int, list[tuple[str, int]]] = defaultdict(list)
-    for pair, bars in data.items():
-        for index, bar in enumerate(bars):
-            if bar.timestamp > int(state["cursor"]):
-                events[bar.timestamp].append((pair, index))
-    # A newly forming candle is the next execution event. Its timestamp lets
-    # the signal use completed history while the last-price snapshot gives a
-    # current forward fill instead of the candle's stale historical open.
-    for pair, (live_timestamp, _) in (live_ticks or {}).items():
+    if not live_only:
+        for pair, bars in data.items():
+            for index, bar in enumerate(bars):
+                if bar.timestamp > int(state["cursor"]):
+                    events[bar.timestamp].append((pair, index))
+    # Watch mode uses only prices fetched in this poll. A stopped watcher must
+    # not synthesize fills at the historical opens of candles it missed.
+    for pair, snapshot in (live_ticks or {}).items():
         bars = data.get(pair, [])
-        if bars and live_timestamp > int(state["cursor"]) and bars[-1].timestamp < live_timestamp:
-            events.setdefault(live_timestamp, []).append((pair, len(bars)))
+        if (
+            bars
+            and snapshot.candle_timestamp > int(state["cursor"])
+            and bars[-1].timestamp < snapshot.candle_timestamp
+        ):
+            events.setdefault(snapshot.candle_timestamp, []).append((pair, len(bars)))
+    # A delayed pair response can land in a different candle bucket. Process
+    # only the newest shared bucket in live mode; older snapshots are stale.
+    if live_only and events:
+        latest_live_event = max(events)
+        events = defaultdict(list, {latest_live_event: events[latest_live_event]})
     if not events:
         raise NoNewCandles("No newer market-data event is available yet.")
 
     timestamp = min(events)
     rows = sorted(events[timestamp], key=lambda item: item[0])
     live_for_event = {
-        pair: float(live_ticks[pair][1])
+        pair: float(live_ticks[pair].price)
         for pair, index in rows
         if live_ticks and pair in live_ticks
-        and live_ticks[pair][0] == timestamp
+        and live_ticks[pair].candle_timestamp == timestamp
         and index == len(data.get(pair, []))
     }
     strategy_name = str(state["strategy"])
@@ -120,6 +142,17 @@ def advance_paper_account(
     open_trades: dict[str, dict[str, Any]] = state["open_trades"]
     marks: dict[str, float] = state["last_marks"]
     cash = float(state["cash"])
+
+    if isinstance(strategy, LlamaRegimeSwitch):
+        model_histories: dict[str, list[Candle]] = {}
+        for pair, index in rows:
+            history = data[pair][:index]
+            if pair in positions or (
+                strategy.trend.desired_long(history, currently_long=False)
+                or strategy.mean_reversion.desired_long(history, currently_long=False)
+            ):
+                model_histories[pair] = history
+        strategy.prepare_batch(model_histories)
 
     for pair, index in rows:
         if pair in live_for_event:
@@ -199,7 +232,24 @@ def advance_paper_account(
             marks[pair] = eligible[-1]
     equity = cash + sum(float(p["quantity"]) * float(marks.get(pair, p["entry_price"])) for pair, p in positions.items())
     state["cash"] = cash
+    previous_cursor = int(state["cursor"])
     state["cursor"] = timestamp
+    if live_only:
+        state["last_processing_mode"] = "live_forward"
+        for pair, snapshot in (live_ticks or {}).items():
+            if snapshot.candle_timestamp == timestamp:
+                state.setdefault("market_snapshot_timestamps", {})[pair] = snapshot.fetched_at
+        interval_seconds = int(state["interval"]) * 60
+        if timestamp - previous_cursor > interval_seconds:
+            state["last_downtime_gap"] = {
+                "mode": "skipped_missed_events",
+                "from_cursor": previous_cursor,
+                "resumed_at": timestamp,
+                "estimated_missed_intervals": max(0, (timestamp - previous_cursor) // interval_seconds - 1),
+                "detected_at": int(time.time()),
+            }
+    else:
+        state["last_processing_mode"] = "historical_replay"
     if isinstance(strategy, LlamaRegimeSwitch):
         notes = strategy.notes
         state["model_notes"] = notes
@@ -252,8 +302,9 @@ def paper_summary(state: dict[str, Any]) -> dict[str, Any]:
 
 def watch_paper_account(
     store: MarketStore, strategy_name: str, poll_seconds: int = 300, once: bool = False,
+    replay_missed_history: bool = False,
 ) -> None:
-    """Refresh public candles and paper-trade from the latest completed signal bar."""
+    """Refresh public candles; default to forward-only fills after downtime."""
     if poll_seconds < 30:
         raise ValueError("Poll interval must be at least 30 seconds")
     state = store.get_paper_state(strategy_name)
@@ -262,34 +313,91 @@ def watch_paper_account(
     interval = int(state["interval"])
     pairs = list(state["pairs"])
 
+    if replay_missed_history:
+        print(json.dumps({"warning": "Historical catch-up replay is enabled; missed candles may receive simulated historical-open fills."}), flush=True)
     while True:
         feed_errors: list[dict[str, str]] = []
-        live_ticks: dict[str, tuple[int, float]] = {}
-        for pair in pairs:
-            try:
-                candles = fetch_ohlc(pair, interval, include_current=True)
-                if candles:
-                    store.save_candles(candles[:-1])
-                    live_ticks[pair] = (candles[-1].timestamp, candles[-1].close)
-            except Exception as exc:
-                feed_errors.append({"pair": pair, "error": str(exc)})
-                print(json.dumps({"pair": pair, "data_error": str(exc)}), flush=True)
+        live_ticks: dict[str, LiveSnapshot] = {}
+
+        def fetch_pair(pair: str) -> tuple[str, list[Any], float]:
+            candles = fetch_ohlc(pair, interval, include_current=True)
+            return pair, candles, time.time()
+
+        # Bounded parallel fetches keep a multi-market snapshot close in time
+        # without sending an unbounded burst to the public data endpoint.
+        with ThreadPoolExecutor(max_workers=min(5, max(1, len(pairs)))) as pool:
+            futures = {pool.submit(fetch_pair, pair): pair for pair in pairs}
+            for future in as_completed(futures):
+                pair = futures[future]
+                try:
+                    _, candles, fetched_at = future.result()
+                    if candles:
+                        store.save_candles(candles[:-1])
+                        live_ticks[pair] = LiveSnapshot(
+                            candles[-1].timestamp, candles[-1].close, fetched_at,
+                        )
+                except Exception as exc:
+                    feed_errors.append({"pair": pair, "error": str(exc)})
+                    print(json.dumps({"pair": pair, "data_error": str(exc)}), flush=True)
+
+        successful_markets = len(live_ticks)
+        snapshot_excluded_pairs: set[str] = set()
+        observed_skew = 0.0
+        if live_ticks:
+            # First require all included prices to refer to the same candle
+            # bucket, then bound their real fetch-time skew.
+            newest_candle = max(snapshot.candle_timestamp for snapshot in live_ticks.values())
+            for pair, snapshot in list(live_ticks.items()):
+                if snapshot.candle_timestamp != newest_candle:
+                    snapshot_excluded_pairs.add(pair)
+                    del live_ticks[pair]
+            if live_ticks:
+                fetched_times = [snapshot.fetched_at for snapshot in live_ticks.values()]
+                observed_skew = max(fetched_times) - min(fetched_times)
+                newest_fetch = max(fetched_times)
+                for pair, snapshot in list(live_ticks.items()):
+                    if newest_fetch - snapshot.fetched_at > LIVE_SNAPSHOT_MAX_SKEW_SECONDS:
+                        snapshot_excluded_pairs.add(pair)
+                        del live_ticks[pair]
+
         current = store.get_paper_state(strategy_name)
         if current and current.get("active"):
             current["last_check_timestamp"] = int(time.time())
             current["feed_errors"] = feed_errors
+            current["market_status"] = {
+                "requested_markets": len(pairs),
+                "successful_markets": successful_markets,
+                "failed_markets": len(feed_errors),
+                "snapshot_excluded_markets": len(snapshot_excluded_pairs),
+                "synchronized_markets": len(live_ticks),
+                "snapshot_skew_seconds": round(observed_skew, 1),
+            }
             store.save_paper_state(current, strategy_name)
         while True:
             try:
-                snapshot = advance_paper_account(store, strategy_name, live_ticks)
+                snapshot = advance_paper_account(
+                    store, strategy_name, live_ticks,
+                    live_only=not replay_missed_history,
+                )
+                state_after_step = store.get_paper_state(strategy_name) or {}
+                gap = state_after_step.get("last_downtime_gap")
+                if (
+                    not replay_missed_history
+                    and isinstance(gap, dict)
+                    and int(gap.get("resumed_at", -1)) == int(state_after_step.get("cursor", -2))
+                ):
+                    print(json.dumps({"downtime": gap, "note": "Skipped missed candle fills; resumed at current public prices."}), flush=True)
                 print(json.dumps(snapshot, allow_nan=False), flush=True)
             except NoNewCandles:
                 break
         current = store.get_paper_state(strategy_name)
         if current and current.get("active"):
             current.setdefault("last_marks", {}).update({
-                pair: price for pair, (_, price) in live_ticks.items()
+                pair: snapshot.price for pair, snapshot in live_ticks.items()
             })
+            current["market_snapshot_timestamps"] = {
+                pair: snapshot.fetched_at for pair, snapshot in live_ticks.items()
+            }
             store.save_paper_state(current, strategy_name)
         if once:
             return

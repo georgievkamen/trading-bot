@@ -8,6 +8,16 @@ from statistics import median
 
 from .kraken import discover_usd_spot_pairs, fetch_ohlc, is_crypto_usd_pair
 from .dashboard import serve_dashboard
+from .equities import (
+    DEFAULT_STOCK_SYMBOLS,
+    PAPER_ACCOUNT_ID as STOCK_PAPER_ACCOUNT_ID,
+    compare_equity_paper_account,
+    extend_equity_paper_universe,
+    refresh_equity_data,
+    run_equity_backtests,
+    start_equity_paper_account,
+    watch_equity_paper_account,
+)
 from .local_model import LocalOllamaAdvisor
 from .paper import PAPER_STRATEGY_NAMES, advance_paper_account, paper_summary, start_paper_account, watch_paper_account
 from .reports import paper_period_comparison, paper_trade_attribution
@@ -29,7 +39,7 @@ def rank_universe(data: dict, min_bars: int = 30) -> list[dict[str, object]]:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="market_research",
-        description="Local crypto research and paper simulation; it cannot place live orders.",
+        description="Local multi-market research and paper simulation; it cannot place live orders.",
     )
     parser.add_argument("--db", default="data/market_research.sqlite3", help="SQLite database path")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -86,6 +96,39 @@ def build_parser() -> argparse.ArgumentParser:
     reset = paper_sub.add_parser("reset", help="Clear one or both paper accounts")
     reset.add_argument("--strategy", choices=PAPER_STRATEGY_NAMES)
 
+    stocks = sub.add_parser("stocks", help="Research and paper-trade US equities on daily bars")
+    stocks.add_argument("--database", default="data/stocks_market_research.sqlite3", help="Separate stock research database")
+    stock_sub = stocks.add_subparsers(dest="stocks_action", required=True)
+    stock_fetch = stock_sub.add_parser("fetch", help="Fetch public Yahoo Finance daily bars and corporate actions")
+    stock_fetch.add_argument("--symbols", nargs="+", default=list(DEFAULT_STOCK_SYMBOLS))
+    stock_fetch.add_argument("--period", default="5y", choices=["1y", "2y", "5y", "10y", "max"])
+    stock_backtest = stock_sub.add_parser("backtest", help="Compare daily stock-market baseline strategies")
+    stock_backtest.add_argument("--symbols", nargs="+", default=list(DEFAULT_STOCK_SYMBOLS))
+    stock_backtest.add_argument("--cash", type=float, default=1000)
+    stock_backtest.add_argument("--fee-bps", type=float, default=0)
+    stock_backtest.add_argument("--slippage-bps", type=float, default=5)
+    stock_backtest.add_argument("--max-position-fraction", type=float, default=0.10)
+    stock_backtest.add_argument("--max-positions", type=int, default=6)
+    stocks_paper = stock_sub.add_parser("paper", help="Manage the separate stock paper account")
+    stocks_paper_sub = stocks_paper.add_subparsers(dest="stocks_paper_action", required=True)
+    stocks_start = stocks_paper_sub.add_parser("start", help="Create the forward-only stock paper account")
+    stocks_start.add_argument("--symbols", nargs="+", default=list(DEFAULT_STOCK_SYMBOLS))
+    stocks_start.add_argument("--cash", type=float, default=1000)
+    stocks_start.add_argument("--fee-bps", type=float, default=0)
+    stocks_start.add_argument("--slippage-bps", type=float, default=5)
+    stocks_start.add_argument("--max-position-fraction", type=float, default=0.10)
+    stocks_start.add_argument("--max-positions", type=int, default=6)
+    stocks_start.add_argument("--model", default=LocalOllamaAdvisor.DEFAULT_MODEL)
+    stocks_start.add_argument("--reset", action="store_true", help="Replace an existing stock paper account")
+    stocks_watch = stocks_paper_sub.add_parser("watch", help="Check once each US trading day after the close")
+    stocks_watch.add_argument("--poll-seconds", type=int, default=60)
+    stocks_watch.add_argument("--once", action="store_true")
+    stocks_paper_sub.add_parser("status", help="Show stock paper account P&L and positions")
+    stocks_paper_sub.add_parser("reset", help="Clear only the stock paper account").add_argument("--yes", action="store_true", help="Confirm clearing the separate stock account")
+    stocks_paper_sub.add_parser("compare", help="Compare stock paper results with SPY and fixed baselines")
+    stocks_add = stocks_paper_sub.add_parser("add-symbols", help="Add fetched tickers without resetting the active account")
+    stocks_add.add_argument("--symbols", nargs="+", required=True)
+
     regime = sub.add_parser("regime", help="Optional local Ollama market-regime annotation")
     regime.add_argument("pair")
     regime.add_argument("--interval", type=int, default=1440)
@@ -102,12 +145,13 @@ def build_parser() -> argparse.ArgumentParser:
     dashboard = sub.add_parser("dashboard", help="Open the local paper-trading dashboard")
     dashboard.add_argument("--host", default="127.0.0.1", choices=["127.0.0.1", "localhost"])
     dashboard.add_argument("--port", type=int, default=8765)
+    dashboard.add_argument("--stocks-db", default="data/stocks_market_research.sqlite3")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    store = MarketStore(args.db)
+    store = MarketStore(args.database if args.command == "stocks" else args.db)
     try:
         if args.command == "learn":
             from .historical_learning import run_historical_learning
@@ -208,6 +252,47 @@ def main(argv: list[str] | None = None) -> int:
                 print("Paper account(s) cleared.")
             return 0
 
+        if args.command == "stocks":
+            if args.stocks_action == "fetch":
+                print(json.dumps(refresh_equity_data(store, args.symbols, period=args.period), indent=2, allow_nan=False))
+            elif args.stocks_action == "backtest":
+                report = run_equity_backtests(
+                    store, args.symbols, initial_cash=args.cash,
+                    costs=Costs(args.fee_bps, args.slippage_bps),
+                    max_position_fraction=args.max_position_fraction,
+                    max_positions=args.max_positions,
+                )
+                print(json.dumps(report, indent=2, allow_nan=False))
+            elif args.stocks_action == "paper":
+                if args.stocks_paper_action == "start":
+                    state = start_equity_paper_account(
+                        store, symbols=args.symbols, starting_cash=args.cash,
+                        costs=Costs(args.fee_bps, args.slippage_bps),
+                        max_position_fraction=args.max_position_fraction,
+                        max_positions=args.max_positions, model=args.model, reset=args.reset,
+                    )
+                    print(json.dumps(paper_summary(state), indent=2, allow_nan=False))
+                elif args.stocks_paper_action == "watch":
+                    try:
+                        watch_equity_paper_account(store, args.poll_seconds, args.once)
+                    except KeyboardInterrupt:
+                        print("Stock paper watch stopped.")
+                elif args.stocks_paper_action == "status":
+                    state = store.get_paper_state(STOCK_PAPER_ACCOUNT_ID)
+                    if not state:
+                        raise RuntimeError("No stock paper account exists. Run stocks paper start first.")
+                    print(json.dumps(paper_summary(state), indent=2, allow_nan=False))
+                elif args.stocks_paper_action == "compare":
+                    print(json.dumps(compare_equity_paper_account(store), indent=2, allow_nan=False))
+                elif args.stocks_paper_action == "add-symbols":
+                    print(json.dumps(extend_equity_paper_universe(store, args.symbols), indent=2, allow_nan=False))
+                else:
+                    if not args.yes:
+                        raise ValueError("Pass --yes to confirm clearing the stock paper account")
+                    store.clear_paper_state(STOCK_PAPER_ACCOUNT_ID)
+                    print("Stock paper account cleared.")
+            return 0
+
         if args.command == "regime":
             bars = store.get_candles(args.interval, [args.pair]).get(args.pair.upper(), [])
             if not bars:
@@ -217,7 +302,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "dashboard":
-            serve_dashboard(args.host, args.port, args.db)
+            serve_dashboard(args.host, args.port, args.db, args.stocks_db)
             return 0
     except Exception as exc:
         print(f"Error: {exc}", file=sys.stderr)

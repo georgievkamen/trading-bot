@@ -11,3 +11,4 @@ dependencies = []
 
 [project.optional-dependencies]
 learning = ["scikit-learn==1.9.1"]
+stocks = ["yfinance>=1.7.0,<2", "tzdata>=2025.1"]

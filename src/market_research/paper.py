@@ -290,7 +290,9 @@ def paper_summary(state: dict[str, Any]) -> dict[str, Any]:
         "active": state["active"], "strategy": state["strategy"], "model": state.get("model"), "cursor": state["cursor"],
         "starting_cash": start, "cash": cash, "equity": equity,
         "pnl": equity - start, "return_pct": (equity / start - 1) * 100,
-        "realized_pnl": sum(float(t["pnl"]) for t in closed),
+        "trade_realized_pnl": sum(float(t["pnl"]) for t in closed),
+        "dividend_income": float(state.get("dividend_income", 0.0)),
+        "realized_pnl": sum(float(t["pnl"]) for t in closed) + float(state.get("dividend_income", 0.0)),
         "closed_trades": len(closed), "open_positions": open_positions,
         "trade_log": closed[-20:], "model_notes": state.get("model_notes", {}),
         "learning_stats": state.get("learning_stats", {

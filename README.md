@@ -110,3 +110,32 @@ Defaults are a $1,000 virtual balance, 26 basis points of fee per side, and 5 ba
 Kraken's public OHLC API returns at most 720 recent entries and includes a current uncommitted candle; historical scans and backtests drop that final candle, while the live paper watcher uses its last price only as an execution snapshot. The auto scanner ranks today's online USD spot markets. A historical backtest on today's universe can have survivorship and selection bias; it cannot establish historical universe membership. It also does not yet model partial fills, queue position, market impact, downtime, taxes, token transfer restrictions, or all venue fee tiers.
 
 Review `docs/ALGORITHM.md`, `docs/ARCHITECTURE.md`, `docs/LOCAL_AI.md`, `docs/INITIAL_CHECK.md`, `docs/PAPER_RUN_CHECK_2026-11-01.md`, `docs/LEARNING_PLAN.md`, and `docs/HISTORICAL_MODEL_RESULTS_2026-11-01.md` before changing the research rules. The paper dashboard is served locally at `http://127.0.0.1:8765/` while its server is running.
+## Separate US equities paper experiment
+
+Stocks use a separate database and paper account, independent of the crypto ledger. The fixed initial universe is SPY, QQQ, IWM, DIA, AAPL, MSFT, NVDA, AMZN, INTC, TSLA, and SPCX (SpaceX), using daily bars. SpaceX has a shorter history than the other symbols, so it limits the common backtest period. Yahoo Finance data comes through the community-maintained yfinance package and can be delayed, rate limited, revised, or unavailable. A universe selected today creates survivorship bias in historical comparisons.
+
+Install the data adapter and fetch five years of daily prices and corporate actions:
+
+~~~powershell
+& $python -m pip install -e ".[stocks]"
+& $python -m market_research stocks fetch
+& $python -m market_research stocks backtest
+~~~
+
+Historical comparisons include cash, equal-weight buy-and-hold, SPY buy-and-hold, trend following, mean reversion, and trend-filtered mean reversion. Illustrative costs default to 0 bps commission and 5 bps adverse slippage per side. Prices are split-adjusted by the provider; ex-date dividends are credited to held positions.
+
+The separate $1,000 Llama paper account classifies completed daily price features only and selects between the fixed trend and mean-reversion rules. It does not fine-tune Llama or consume stock news.
+
+~~~powershell
+& $python -m market_research stocks paper start --cash 1000 --model llama3.1:8b-instruct-q4_K_M
+& $python -m market_research stocks paper watch
+& $python -m market_research stocks paper status
+& $python -m market_research stocks paper compare
+~~~
+
+For an existing account, fetch new tickers, stop its watcher, run `stocks paper add-symbols --symbols INTC TSLA SPCX`, and restart the watcher. This extends the account without resetting cash or trade history.
+
+The watcher polls after 4:15 p.m. New York time on weekdays, allowing the feed to finish after the regular 4 p.m. session close. Each after-close target applies to the following session and is simulated at that session's close. The watcher never replays historical fills; after downtime or missed sessions it discards stale targets and forms a fresh classification. The experiment is cash-only and long-only, caps entries at 10% of marked equity and six open positions, and has no broker credentials or live order route. Weekends and market holidays can pass without decisions.
+
+The dashboard reads both crypto and stock databases. Stock paper results are descriptive research outcomes and do not establish a profitable strategy.
+

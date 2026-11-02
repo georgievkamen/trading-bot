@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from math import isfinite
 from collections import defaultdict
 from contextlib import contextmanager
 from pathlib import Path
@@ -23,6 +24,10 @@ class MarketStore:
                 PRIMARY KEY(pair, interval, timestamp))""")
             db.execute("""CREATE TABLE IF NOT EXISTS paper_state (
                 state_id TEXT PRIMARY KEY, payload TEXT NOT NULL)""")
+            db.execute("""CREATE TABLE IF NOT EXISTS corporate_actions (
+                pair TEXT NOT NULL, timestamp INTEGER NOT NULL,
+                dividend REAL NOT NULL DEFAULT 0, split_ratio REAL NOT NULL DEFAULT 0,
+                PRIMARY KEY(pair, timestamp))""")
             db.execute("""CREATE TABLE IF NOT EXISTS ai_observations (
                 state_id TEXT NOT NULL, pair TEXT NOT NULL, decision_timestamp INTEGER NOT NULL,
                 close REAL NOT NULL, regime TEXT NOT NULL, confidence REAL NOT NULL,
@@ -68,6 +73,51 @@ class MarketStore:
             for row in db.execute(query, params):
                 candle = Candle(*row)
                 grouped.setdefault(candle.pair, []).append(candle)
+        return grouped
+
+    def save_corporate_actions(self, actions: list[dict[str, object]]) -> int:
+        if not actions:
+            return 0
+        rows = []
+        for item in actions:
+            dividend = float(item.get("dividend", 0))
+            split_ratio = float(item.get("split_ratio", 0))
+            if not isfinite(dividend) or not isfinite(split_ratio) or dividend < 0 or split_ratio < 0:
+                raise ValueError("Corporate-action amounts must be finite and non-negative")
+            if dividend > 0 or split_ratio > 0:
+                rows.append((str(item["pair"]).upper(), int(item["timestamp"]), dividend, split_ratio))
+        if not rows:
+            return 0
+        with self.connect() as db:
+            before = db.total_changes
+            db.executemany("""INSERT INTO corporate_actions(pair, timestamp, dividend, split_ratio)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(pair, timestamp) DO UPDATE SET
+                dividend=excluded.dividend, split_ratio=excluded.split_ratio""", rows)
+            return db.total_changes - before
+
+    def get_corporate_actions(
+        self, pairs: list[str], from_timestamp: int | None = None,
+        through_timestamp: int | None = None,
+    ) -> dict[str, dict[int, dict[str, float]]]:
+        if not pairs:
+            return {}
+        placeholders = ",".join("?" for _ in pairs)
+        query = f"SELECT pair, timestamp, dividend, split_ratio FROM corporate_actions WHERE pair IN ({placeholders})"
+        params: list[object] = [pair.upper() for pair in pairs]
+        if from_timestamp is not None:
+            query += " AND timestamp >= ?"
+            params.append(from_timestamp)
+        if through_timestamp is not None:
+            query += " AND timestamp <= ?"
+            params.append(through_timestamp)
+        query += " ORDER BY pair, timestamp"
+        grouped: dict[str, dict[int, dict[str, float]]] = {}
+        with self.connect() as db:
+            for pair, timestamp, dividend, split_ratio in db.execute(query, params):
+                grouped.setdefault(str(pair), {})[int(timestamp)] = {
+                    "dividend": float(dividend), "split_ratio": float(split_ratio),
+                }
         return grouped
 
     def get_paper_state(self, account_id: str) -> dict[str, object] | None:

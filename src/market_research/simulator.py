@@ -14,8 +14,12 @@ class Costs:
     slippage_bps: float = 5.0
 
     def __post_init__(self) -> None:
+        if not isfinite(self.fee_bps) or not isfinite(self.slippage_bps):
+            raise ValueError("Fee and slippage assumptions must be finite")
         if self.fee_bps < 0 or self.slippage_bps < 0:
             raise ValueError("Costs cannot be negative")
+        if self.slippage_bps >= 10_000:
+            raise ValueError("Slippage must be below 10,000 bps so exit prices remain positive")
 
     @property
     def fee_rate(self) -> float:

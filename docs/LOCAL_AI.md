@@ -1,6 +1,6 @@
 # Local model experiment
 
-The selected model is Llama 3.2 3B through Ollama on the Windows desktop. The local advisor receives derived 15-minute price-return and volatility features and returns one strict label: `trend`, `range`, `high_volatility`, or `unknown`, with confidence and a short rationale. It selects between deterministic trend and mean-reversion rules; it cannot select position size or bypass the simulator's risk limits.
+The selected model is Llama 3.1 8B Instruct Q4_K_M through Ollama on the Windows desktop. The local advisor receives derived 15-minute price-return and volatility features and returns one strict label: `trend`, `range`, `high_volatility`, or `unknown`, with confidence and a short rationale. Eligible markets are classified in groups of three to balance throughput with response reliability on the local CPU. It selects between deterministic trend and mean-reversion rules; it cannot select position size or bypass the simulator's risk limits.
 
 Check the local model's regime label with:
 

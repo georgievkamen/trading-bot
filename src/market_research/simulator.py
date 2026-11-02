@@ -49,16 +49,29 @@ class Simulator:
         self.max_position_fraction = max_position_fraction
         self.max_positions = max_positions
 
-    def run(self, candles_by_pair: dict[str, list[Candle]], strategy: Strategy) -> SimulationResult:
+    def run(
+        self,
+        candles_by_pair: dict[str, list[Candle]],
+        strategy: Strategy,
+        from_timestamp: int | None = None,
+        through_timestamp: int | None = None,
+    ) -> SimulationResult:
+        if from_timestamp is not None and through_timestamp is not None and from_timestamp > through_timestamp:
+            raise ValueError("Simulation start must not be after its end")
         normalized = {pair: sorted(rows, key=lambda c: c.timestamp) for pair, rows in candles_by_pair.items() if rows}
         if not normalized:
             raise ValueError("No candles available")
         events: dict[int, list[tuple[str, int]]] = defaultdict(list)
         for pair, bars in normalized.items():
             for index in range(1, len(bars)):
-                events[bars[index].timestamp].append((pair, index))
+                timestamp = bars[index].timestamp
+                if from_timestamp is not None and timestamp < from_timestamp:
+                    continue
+                if through_timestamp is not None and timestamp > through_timestamp:
+                    continue
+                events[timestamp].append((pair, index))
         if not events:
-            raise ValueError("At least two candles per pair are required")
+            raise ValueError("No candle events fall within the requested simulation period")
 
         cash = self.initial_cash
         positions: dict[str, Position] = {}
@@ -123,7 +136,9 @@ class Simulator:
 
         # Mark open positions with each pair's latest available closed candle.
         for pair, bars in normalized.items():
-            last_price[pair] = bars[-1].close
+            eligible = [bar for bar in bars if through_timestamp is None or bar.timestamp <= through_timestamp]
+            if eligible:
+                last_price[pair] = eligible[-1].close
         ending_equity = cash + sum(
             pos.quantity * last_price.get(pos.pair, pos.entry_price) for pos in positions.values()
         )

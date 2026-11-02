@@ -58,6 +58,15 @@ The selected active paper experiment uses **Llama only** on 15-minute bars. It c
 & $python -m market_research paper status --strategy llama_regime
 ```
 
+Review the running experiment without resetting or advancing its account:
+
+```powershell
+& $python -m market_research paper analyze --strategy llama_regime
+& $python -m market_research paper compare --strategy llama_regime
+```
+
+`paper analyze` reconciles closed-trade P&L into estimated gross price movement, fees, and slippage, then estimates the cost of liquidating currently open positions at their saved marks. `paper compare` uses the account's recorded forward period, stored market universe, and configured costs/risk limits to compare its ledger with cash and the fixed strategy baselines. It also reports an equal-weight buy-and-hold reference. Llama's live snapshot fills and the baselines' historical next-bar-open fills differ, so this is a same-period reference rather than a controlled identical-fill test. The report is descriptive and cannot establish future profitability.
+
 The separate trend and mean-reversion accounts are optional controls; they are not part of the selected active run. Their saved history can be retained without running their watchers. `paper start` resets only the named strategy's account, so do not repeat it when you mean to resume an existing account.
 
 `paper watch` refreshes public candles and automatically simulates entries/exits when a new live candle snapshot is available. It fetches markets concurrently, records each fetch time, and only combines prices from the same candle bucket fetched within 30 seconds of one another; older snapshots are excluded and reported. Forward watcher fills use the current public last price with adverse slippage, not a completed bar's historical open. If the watcher was stopped, the default mode skips missed candle events and resumes at current public prices, recording the gap in the account state. `--replay-missed-history` explicitly opts into historical catch-up fills and is intended only for deliberate replay experiments. The dashboard reports successful, failed, and snapshot-excluded markets separately; a partial feed error no longer marks the whole watcher offline. The Llama account batches eligible markets in groups of three to reduce sequential CPU inference time; it uses Llama to select a deterministic baseline, while risk limits and simulated fills remain in the engine. This improves cadence, not expected returns. No live order route exists. `paper step` manually advances one stored bar using next-bar-open replay. `paper reset` clears all accounts; add `--strategy` to clear one. The local database and paper balances are saved under `data/` in this project folder.

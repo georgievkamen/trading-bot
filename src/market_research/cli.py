@@ -10,6 +10,7 @@ from .kraken import discover_usd_spot_pairs, fetch_ohlc, is_crypto_usd_pair
 from .dashboard import serve_dashboard
 from .local_model import LocalOllamaAdvisor
 from .paper import PAPER_STRATEGY_NAMES, advance_paper_account, paper_summary, start_paper_account, watch_paper_account
+from .reports import paper_period_comparison, paper_trade_attribution
 from .simulator import Costs, Simulator
 from .storage import MarketStore
 from .strategies import STRATEGIES
@@ -78,6 +79,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     status = paper_sub.add_parser("status", help="Show paper balance, P&L, positions, and recent trades")
     status.add_argument("--strategy", choices=PAPER_STRATEGY_NAMES, default="trend")
+    analyze = paper_sub.add_parser("analyze", help="Attribute paper P&L to market movement, fees, and estimated slippage")
+    analyze.add_argument("--strategy", choices=PAPER_STRATEGY_NAMES, default="llama_regime")
+    compare = paper_sub.add_parser("compare", help="Compare a paper account with cash, buy-and-hold, and fixed strategies over its recorded period")
+    compare.add_argument("--strategy", choices=PAPER_STRATEGY_NAMES, default="llama_regime")
     reset = paper_sub.add_parser("reset", help="Clear one or both paper accounts")
     reset.add_argument("--strategy", choices=PAPER_STRATEGY_NAMES)
 
@@ -191,6 +196,13 @@ def main(argv: list[str] | None = None) -> int:
                 if not state:
                     raise RuntimeError(f"No {args.strategy} paper account exists. Run paper start first.")
                 print(json.dumps(paper_summary(state), indent=2, allow_nan=False))
+            elif args.paper_action == "analyze":
+                state = store.get_paper_state(args.strategy)
+                if not state:
+                    raise RuntimeError(f"No {args.strategy} paper account exists. Run paper start first.")
+                print(json.dumps(paper_trade_attribution(state), indent=2, allow_nan=False))
+            elif args.paper_action == "compare":
+                print(json.dumps(paper_period_comparison(store, args.strategy), indent=2, allow_nan=False))
             else:
                 store.clear_paper_state(args.strategy)
                 print("Paper account(s) cleared.")

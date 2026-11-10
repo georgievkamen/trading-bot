@@ -62,7 +62,7 @@ class LlamaRegimeSwitch:
             try:
                 notes = self.advisor.classify_batch(
                     {pair: [bar.close for bar in rows[-61:]] for pair, rows in batch.items()},
-                    timeout=90,
+                    timeout=150,
                     news_by_pair=news_by_pair,
                     learning_feedback=self.learning_feedback,
                 )
@@ -170,3 +170,4 @@ class LlamaRegimeSwitch:
         if strategy is not None:
             return strategy.entry_strength(history)
         return 0.0
+

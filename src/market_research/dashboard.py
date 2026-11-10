@@ -37,8 +37,8 @@ PAGE = r"""<!doctype html>
 <div class="footer">Local dashboard · public market data · paper execution only · <span id="updated">Waiting for data</span></div>
 </main>
 <script>
-const colors={trend:'#43d6a0',mean_reversion:'#e8c476',mean_reversion_filtered:'#73d6e3',volatility_breakout:'#ff9f68',relative_momentum:'#d297ff',llama_regime:'#8da8ff',stocks_llama_regime:'#d297ff',stocks_trend:'#43d6a0',stocks_mean_reversion:'#e8c476',stocks_mean_reversion_filtered:'#73d6e3',stocks_volatility_breakout:'#ff9f68',stocks_relative_momentum:'#d297ff'};
-const labels={trend:'Trend baseline',mean_reversion:'Mean-reversion baseline',mean_reversion_filtered:'Trend-filtered mean reversion (experiment)',volatility_breakout:'Volatility-adjusted breakout',relative_momentum:'Relative momentum',llama_regime:'Crypto · Llama regime strategy',stocks_llama_regime:'US equities · Llama paper strategy',stocks_trend:'US equities · trend baseline',stocks_mean_reversion:'US equities · mean reversion',stocks_mean_reversion_filtered:'US equities · filtered mean reversion',stocks_volatility_breakout:'US equities · volatility breakout',stocks_relative_momentum:'US equities · relative momentum'};
+const colors={trend:'#43d6a0',mean_reversion:'#e8c476',mean_reversion_filtered:'#73d6e3',volatility_breakout:'#ff9f68',volatility_breakout_1h:'#ff7a59',relative_momentum:'#d297ff',llama_regime:'#8da8ff',stocks_llama_regime:'#d297ff',stocks_trend:'#43d6a0',stocks_mean_reversion:'#e8c476',stocks_mean_reversion_filtered:'#73d6e3',stocks_volatility_breakout:'#ff9f68',stocks_relative_momentum:'#d297ff'};
+const labels={trend:'Trend baseline',mean_reversion:'Mean-reversion baseline',mean_reversion_filtered:'Trend-filtered mean reversion (experiment)',volatility_breakout:'Crypto · volatility breakout · daily',volatility_breakout_1h:'Crypto · volatility breakout · 1h',relative_momentum:'Crypto · relative momentum · daily',llama_regime:'Crypto · Llama regime · 15m',stocks_llama_regime:'US equities · Llama paper strategy',stocks_trend:'US equities · trend baseline',stocks_mean_reversion:'US equities · mean reversion',stocks_mean_reversion_filtered:'US equities · filtered mean reversion',stocks_volatility_breakout:'US equities · volatility breakout',stocks_relative_momentum:'US equities · relative momentum · daily'};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(Number(n||0));
 const pct=n=>`${Number(n||0)>=0?'+':''}${Number(n||0).toFixed(2)}%`;
@@ -159,3 +159,4 @@ def serve_dashboard(host: str = "127.0.0.1", port: int = 8765, database: str = "
         pass
     finally:
         server.server_close()
+

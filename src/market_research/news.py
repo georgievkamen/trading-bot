@@ -6,9 +6,10 @@ import time
 import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urlsplit
+from urllib.parse import quote_plus, urlsplit
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,3 +135,99 @@ class CryptoNewsFeed:
         self._last_status = "available" if self._cached else "no_fresh_items"
         self._last_error = None
         return self._cached
+
+
+class EquityNewsFeed:
+    """Cached public ticker-news headlines for cautious, supplementary LLM context."""
+
+    CACHE_SECONDS = 900
+    MAX_AGE = timedelta(hours=24)
+    MAX_HEADLINES = 3
+    _NAMES = {
+        "SPY": "S&P 500 ETF", "QQQ": "Nasdaq 100 ETF", "IWM": "Russell 2000 ETF",
+        "DIA": "Dow Jones ETF", "AAPL": "Apple", "MSFT": "Microsoft",
+        "NVDA": "Nvidia", "AMZN": "Amazon", "INTC": "Intel",
+        "TSLA": "Tesla", "SPCX": "SpaceX",
+    }
+
+    def __init__(self, timeout: float = 4.0) -> None:
+        self.timeout = timeout
+        self._cache: dict[str, tuple[float, tuple[NewsHeadline, ...], str, str | None]] = {}
+
+    def for_symbol(self, symbol: str) -> tuple[NewsHeadline, ...]:
+        return self.fetch_many([symbol]).get(symbol.upper(), ())
+
+    def fetch_many(self, symbols: Sequence[str]) -> dict[str, tuple[NewsHeadline, ...]]:
+        normalized = list(dict.fromkeys(symbol.strip().upper() for symbol in symbols if symbol.strip()))
+        result: dict[str, tuple[NewsHeadline, ...]] = {}
+        pending: list[str] = []
+        now = time.monotonic()
+        for symbol in normalized:
+            cached = self._cache.get(symbol)
+            if cached and now - cached[0] < self.CACHE_SECONDS:
+                result[symbol] = cached[1]
+            else:
+                pending.append(symbol)
+        if pending:
+            with ThreadPoolExecutor(max_workers=min(8, len(pending))) as pool:
+                futures = {pool.submit(self._load_symbol, symbol): symbol for symbol in pending}
+                for future in as_completed(futures):
+                    symbol = futures[future]
+                    try:
+                        items, status, error = future.result()
+                    except Exception as exc:  # a feed failure must not stop the price-only path
+                        items, status, error = (), "unavailable", str(exc)[:200]
+                    self._cache[symbol] = (time.monotonic(), items, status, error)
+                    result[symbol] = items
+        return result
+
+    def status_for(self, symbol: str) -> str:
+        cached = self._cache.get(symbol.upper())
+        return cached[2] if cached else "not_checked"
+
+    def _load_symbol(self, symbol: str) -> tuple[tuple[NewsHeadline, ...], str, str | None]:
+        subject = self._NAMES.get(symbol, symbol)
+        query = quote_plus(f'"{subject}" stock when:1d')
+        url = f"https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
+        request = urllib.request.Request(
+            url, headers={"User-Agent": "MarketResearchPaperBot/1.0 (local paper research)"},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                root = ET.fromstring(response.read(1_000_000))
+        except (urllib.error.URLError, TimeoutError, OSError, ET.ParseError, ValueError) as exc:
+            return (), "unavailable", str(exc)[:200]
+
+        current = datetime.now(timezone.utc)
+        cutoff = current - self.MAX_AGE
+        items: list[NewsHeadline] = []
+        seen: set[str] = set()
+        for item in root.findall(".//item"):
+            title = " ".join((item.findtext("title") or "").split())[:240]
+            item_url = (item.findtext("link") or "").strip()
+            pub_date = (item.findtext("pubDate") or "").strip()
+            source = " ".join((item.findtext("source") or "Google News").split())[:80]
+            if not title or not item_url or not pub_date or item_url in seen:
+                continue
+            parsed = urlsplit(item_url)
+            if parsed.scheme != "https" or not parsed.hostname:
+                continue
+            try:
+                published = email.utils.parsedate_to_datetime(pub_date)
+                if published.tzinfo is None:
+                    published = published.replace(tzinfo=timezone.utc)
+                published = published.astimezone(timezone.utc)
+            except (TypeError, ValueError, OverflowError):
+                continue
+            if published < cutoff or published > current + timedelta(minutes=10):
+                continue
+            seen.add(item_url)
+            items.append(NewsHeadline(
+                source=source,
+                published_at=published.isoformat().replace("+00:00", "Z"),
+                title=title,
+                url=item_url,
+            ))
+            if len(items) >= self.MAX_HEADLINES:
+                break
+        return tuple(items), "available" if items else "no_fresh_items", None

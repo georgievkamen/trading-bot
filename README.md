@@ -75,7 +75,18 @@ To paper-trade a deterministic strategy, create its separate $1,000 virtual acco
 & $python -m market_research paper status --strategy volatility_breakout
 ```
 
-The selected active paper experiment uses **Llama only** on 15-minute bars. It checks Kraken every five minutes, starts from the latest stored candle, and can allocate up to 10% of marked account equity per entry with at most six open positions. Start the $1,000 virtual account once, then run its watcher:
+The same breakout rules can run on daily and hourly crypto candles because the hourly trial has its own ledger ID. Crypto relative momentum has a separate daily ledger:
+
+```powershell
+& $python -m market_research paper start --strategy volatility_breakout_1h --interval 60 --cash 1000 --max-position-fraction 0.10 --max-positions 6
+& $python -m market_research paper watch --strategy volatility_breakout_1h --poll-seconds 300
+& $python -m market_research paper start --strategy relative_momentum --interval 1440 --cash 1000 --max-position-fraction 0.10 --max-positions 6
+& $python -m market_research paper watch --strategy relative_momentum --poll-seconds 300
+```
+
+`paper start` refuses to replace any saved ledger. If the account already exists, resume it with `paper watch` and inspect it with `paper status`.
+
+The Llama regime experiment uses 15-minute crypto bars and can run alongside the deterministic accounts. It checks Kraken every five minutes, starts from the latest stored candle, and can allocate up to 10% of marked account equity per entry with at most six open positions. Create its $1,000 virtual account only if it has no saved ledger, then run its watcher:
 
 ```powershell
 & $python -m market_research paper start --interval 15 --cash 1000 --strategy llama_regime --model llama3.1:8b-instruct-q4_K_M --max-position-fraction 0.10 --max-positions 6
@@ -92,7 +103,7 @@ Review the running experiment without resetting or advancing its account:
 
 `paper analyze` reconciles closed-trade P&L into estimated gross price movement, fees, and slippage, then estimates the cost of liquidating currently open positions at their saved marks. `paper compare` uses the account's recorded forward period, stored market universe, and configured costs/risk limits to compare its ledger with cash and the fixed strategy baselines. It also reports an equal-weight buy-and-hold reference. Llama's live snapshot fills and the baselines' historical next-bar-open fills differ, so this is a same-period reference rather than a controlled identical-fill test. The report is descriptive and cannot establish future profitability.
 
-Each strategy has a separate paper ledger. Existing accounts are preserved; use `--reset` only when you intentionally want to replace one.
+Each experiment has a separate paper ledger. `paper start` will not overwrite a saved crypto ledger; the stocks command also requires an explicit `--reset` to replace an active stock ledger.
 
 `paper watch` refreshes public candles and automatically simulates entries/exits when a new live candle snapshot is available. It fetches markets concurrently, records each fetch time, and only combines prices from the same candle bucket fetched within 30 seconds of one another; older snapshots are excluded and reported. Forward watcher fills use the current public last price with adverse slippage, not a completed bar's historical open. If the watcher was stopped, the default mode skips missed candle events and resumes at current public prices, recording the gap in the account state. `--replay-missed-history` explicitly opts into historical catch-up fills and is intended only for deliberate replay experiments. The dashboard reports successful, failed, and snapshot-excluded markets separately; a partial feed error no longer marks the whole watcher offline. The Llama account batches eligible markets in groups of three to reduce sequential CPU inference time; it uses Llama to select a deterministic baseline, while risk limits and simulated fills remain in the engine. This improves cadence, not expected returns. No live order route exists. `paper step` manually advances one stored bar using next-bar-open replay. `paper reset` clears all accounts; add `--strategy` to clear one. The local database and paper balances are saved under `data/` in this project folder.
 
@@ -173,3 +184,4 @@ Defaults are a $1,000 virtual balance, 26 basis points of fee per side, and 5 ba
 Kraken's public OHLC API returns at most 720 recent entries and includes a current uncommitted candle; historical scans and backtests drop that final candle, while the live paper watcher uses its last price only as an execution snapshot. The auto scanner ranks today's online USD spot markets. A historical backtest on today's universe can have survivorship and selection bias; it cannot establish historical universe membership. It also does not yet model partial fills, queue position, market impact, downtime, taxes, token transfer restrictions, or all venue fee tiers.
 
 Review `docs/ALGORITHM.md`, `docs/ARCHITECTURE.md`, `docs/LOCAL_AI.md`, `docs/INITIAL_CHECK.md`, `docs/PAPER_RUN_CHECK_2026-11-01.md`, `docs/LEARNING_PLAN.md`, `docs/HISTORICAL_MODEL_RESULTS_2026-11-01.md`, and `docs/NEW_STRATEGIES_RESULTS_2026-11-10.md` before changing the research rules. The paper dashboard is served locally at `http://127.0.0.1:8765/` while its server is running.
+

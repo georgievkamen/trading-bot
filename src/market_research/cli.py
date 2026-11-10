@@ -74,7 +74,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     paper = sub.add_parser("paper", help="Manage the persistent simulated account")
     paper_sub = paper.add_subparsers(dest="paper_action", required=True)
-    start = paper_sub.add_parser("start", help="Create/reset a simulated account and replay cursor")
+    start = paper_sub.add_parser("start", help="Create a simulated account only when no saved ledger exists")
     start.add_argument("--pairs", nargs="+", help="Optional subset; otherwise use all stored/scanned pairs")
     start.add_argument("--interval", type=int, default=15)
     start.add_argument("--strategy", choices=PAPER_STRATEGY_NAMES, default="trend")
@@ -392,3 +392,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

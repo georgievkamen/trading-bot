@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
+from bisect import bisect_left
 from math import isfinite
 
 from .models import Candle, EquityPoint, Position, SimulationResult, Trade
-from .strategies import Strategy
+from .strategies import Strategy, prepare_universe, should_remain_long
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,13 +38,13 @@ class Simulator:
         self,
         initial_cash: float = 1000.0,
         costs: Costs = Costs(),
-        max_position_fraction: float = 0.25,
-        max_positions: int = 4,
+        max_position_fraction: float = 0.10,
+        max_positions: int = 6,
     ) -> None:
         if not isfinite(initial_cash) or initial_cash <= 0:
             raise ValueError("Initial cash must be positive")
-        if not 0 < max_position_fraction <= 1 or max_positions < 1:
-            raise ValueError("Invalid position limits")
+        if not 0 < max_position_fraction <= 0.10 or not 1 <= max_positions <= 6:
+            raise ValueError("Position limits cannot exceed 10% of equity or six concurrent positions")
         self.initial_cash = initial_cash
         self.costs = costs
         self.max_position_fraction = max_position_fraction
@@ -61,6 +62,12 @@ class Simulator:
         normalized = {pair: sorted(rows, key=lambda c: c.timestamp) for pair, rows in candles_by_pair.items() if rows}
         if not normalized:
             raise ValueError("No candles available")
+        reset = getattr(strategy, "reset", None)
+        if callable(reset):
+            reset()
+        timestamps_by_pair = {
+            pair: [bar.timestamp for bar in bars] for pair, bars in normalized.items()
+        }
         events: dict[int, list[tuple[str, int]]] = defaultdict(list)
         for pair, bars in normalized.items():
             for index in range(1, len(bars)):
@@ -82,6 +89,11 @@ class Simulator:
 
         for timestamp in sorted(events):
             rows = sorted(events[timestamp], key=lambda entry: entry[0])
+            completed_histories = {
+                pair: bars[:bisect_left(timestamps_by_pair[pair], timestamp)]
+                for pair, bars in normalized.items()
+            }
+            prepare_universe(strategy, completed_histories, timestamp)
             for pair, index in rows:
                 # At the open, only the previous close is known; current close is
                 # reserved for post-fill marking below.
@@ -90,7 +102,7 @@ class Simulator:
             # Process exits before entries so simulated proceeds can fund new positions.
             for pair, index in rows:
                 position = positions.get(pair)
-                if position and not strategy.desired_long(normalized[pair][:index], currently_long=True):
+                if position and not should_remain_long(strategy, normalized[pair][:index], position):
                     fill = normalized[pair][index].open * (1 - self.costs.slippage_rate)
                     proceeds = position.quantity * fill * (1 - self.costs.fee_rate)
                     cash += proceeds
@@ -177,3 +189,61 @@ class Simulator:
             trades=completed,
             equity_curve=curve,
         )
+
+
+def equal_weight_buy_and_hold(
+    candles_by_pair: dict[str, list[Candle]], initial_cash: float, costs: Costs,
+    *, from_timestamp: int | None = None, through_timestamp: int | None = None,
+) -> dict[str, object]:
+    """Mark an equal-weight basket after next-open entries; no lookahead or shorts."""
+    normalized = {
+        pair: sorted(
+            [bar for bar in bars if (from_timestamp is None or bar.timestamp >= from_timestamp)
+             and (through_timestamp is None or bar.timestamp <= through_timestamp)],
+            key=lambda bar: bar.timestamp,
+        )
+        for pair, bars in candles_by_pair.items()
+    }
+    normalized = {pair: bars for pair, bars in normalized.items() if bars}
+    if not normalized:
+        raise ValueError("No candles available for buy-and-hold benchmark")
+    allocation = initial_cash / len(normalized)
+    events: dict[int, list[tuple[str, Candle]]] = defaultdict(list)
+    for pair, bars in normalized.items():
+        for bar in bars:
+            events[bar.timestamp].append((pair, bar))
+
+    cash = initial_cash
+    holdings: dict[str, float] = {}
+    marks: dict[str, float] = {}
+    curve: list[float] = [initial_cash]
+    for timestamp in sorted(events):
+        for pair, bar in sorted(events[timestamp], key=lambda row: row[0]):
+            if pair not in holdings:
+                fill = bar.open * (1 + costs.slippage_rate)
+                quantity = allocation / (fill * (1 + costs.fee_rate))
+                spent = quantity * fill * (1 + costs.fee_rate)
+                cash -= spent
+                holdings[pair] = quantity
+            marks[pair] = bar.close
+        curve.append(cash + sum(quantity * marks.get(pair, 0.0) for pair, quantity in holdings.items()))
+
+    ending_equity = cash + sum(quantity * marks.get(pair, 0.0) for pair, quantity in holdings.items())
+    peak = initial_cash
+    max_drawdown = 0.0
+    for equity in curve:
+        peak = max(peak, equity)
+        if peak > 0:
+            max_drawdown = max(max_drawdown, (peak - equity) / peak)
+    return {
+        "strategy": "equal_weight_buy_and_hold",
+        "ending_equity": ending_equity,
+        "pnl": ending_equity - initial_cash,
+        "return_pct": (ending_equity / initial_cash - 1) * 100,
+        "max_drawdown_pct": max_drawdown * 100,
+        "closed_trades": 0,
+        "win_rate_pct": None,
+        "profit_factor": None,
+        "open_positions": len(holdings),
+        "pairs": sorted(holdings),
+    }

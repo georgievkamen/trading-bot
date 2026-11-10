@@ -26,4 +26,3 @@ A separate downside cutoff at a rolling z-score of -3 was also explored and reje
 ## Decision
 
 Keep the candidate isolated as `mean_reversion_filtered` for paper comparison. Do not connect it to live execution, increase its size, or describe it as profitable. Forward paper results are a new evaluation period; the historical-learning model remains offline because it failed its earlier walk-forward gate.
-

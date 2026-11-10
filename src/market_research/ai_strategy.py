@@ -3,11 +3,14 @@ from __future__ import annotations
 from .local_model import LocalOllamaAdvisor
 from .models import Candle
 from .news import CryptoNewsFeed
-from .strategies import MeanReversion, TrendFollowing
+from .strategies import (
+    MeanReversion, RelativeMomentum, Strategy, TrendFollowing,
+    VolatilityAdjustedBreakout, prepare_universe, should_remain_long,
+)
 
 
 class LlamaRegimeSwitch:
-    """Use local Llama regime labels to choose a deterministic paper baseline."""
+    """Use bounded regime labels to choose one approved deterministic strategy or cash."""
 
     name = "llama_regime"
     minimum_confidence = 0.60
@@ -22,14 +25,28 @@ class LlamaRegimeSwitch:
         self.learning_feedback = learning_feedback
         self.advisor = LocalOllamaAdvisor(model)
         self.news_feed = CryptoNewsFeed()
-        self.trend = TrendFollowing()
-        self.mean_reversion = MeanReversion()
+        self.strategies: dict[str, Strategy] = {
+            "trend": TrendFollowing(),
+            "range": MeanReversion(),
+            "breakout": VolatilityAdjustedBreakout(),
+            "relative_momentum": RelativeMomentum(),
+        }
         self._cache: dict[tuple[str, int], str] = {}
         self._notes: dict[str, dict[str, object]] = {}
 
     @property
     def notes(self) -> dict[str, dict[str, object]]:
         return {pair: dict(note) for pair, note in self._notes.items()}
+
+    def prepare_universe(self, histories: dict[str, list[Candle]], timestamp: int) -> None:
+        for strategy in self.strategies.values():
+            prepare_universe(strategy, histories, timestamp)
+
+    def eligible_for_classification(self, history: list[Candle], currently_long: bool) -> bool:
+        return currently_long or any(
+            strategy.desired_long(history, currently_long=False)
+            for strategy in self.strategies.values()
+        )
 
     def prepare_batch(self, histories: dict[str, list[Candle]]) -> None:
         """Classify eligible markets in bounded requests before portfolio decisions."""
@@ -130,19 +147,26 @@ class LlamaRegimeSwitch:
 
     def desired_long(self, history: list[Candle], currently_long: bool) -> bool:
         regime = self._regime(history)
-        if regime == "trend":
-            return self.trend.desired_long(history, currently_long)
-        if regime == "range":
-            return self.mean_reversion.desired_long(history, currently_long)
-        if regime in {"high_volatility", "unavailable"}:
+        strategy = self.strategies.get(regime)
+        if strategy is not None:
+            return strategy.desired_long(history, currently_long)
+        if regime in {"cash", "high_volatility", "unavailable"}:
             return False
         # Uncertain model labels cause no new entries and do not churn an open position.
         return currently_long
 
+    def desired_long_for_position(self, history: list[Candle], position: object) -> bool:
+        regime = self._regime(history)
+        strategy = self.strategies.get(regime)
+        if strategy is not None:
+            return should_remain_long(strategy, history, position)
+        if regime in {"cash", "high_volatility", "unavailable"}:
+            return False
+        return True
+
     def entry_strength(self, history: list[Candle]) -> float:
         regime = self._regime(history)
-        if regime == "trend":
-            return self.trend.entry_strength(history)
-        if regime == "range":
-            return self.mean_reversion.entry_strength(history)
+        strategy = self.strategies.get(regime)
+        if strategy is not None:
+            return strategy.entry_strength(history)
         return 0.0

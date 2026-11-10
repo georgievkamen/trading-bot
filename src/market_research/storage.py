@@ -147,7 +147,10 @@ class MarketStore:
                 json.dumps(item.get("news", []), separators=(",", ":"), allow_nan=False),
             )
             for item in observations
-            if item.get("regime") in {"trend", "range", "high_volatility", "unknown"}
+            if item.get("regime") in {
+                "trend", "range", "breakout", "relative_momentum", "cash",
+                "high_volatility", "unknown",
+            }
         ]
         inserted = 0
         with self.connect() as db:

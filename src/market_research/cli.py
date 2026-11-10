@@ -4,6 +4,7 @@ import argparse
 import json
 import sys
 from dataclasses import asdict
+from datetime import datetime, timezone
 from statistics import median
 
 from .kraken import discover_usd_spot_pairs, fetch_ohlc, is_crypto_usd_pair
@@ -11,17 +12,22 @@ from .dashboard import serve_dashboard
 from .equities import (
     DEFAULT_STOCK_SYMBOLS,
     PAPER_ACCOUNT_ID as STOCK_PAPER_ACCOUNT_ID,
+    INTRADAY_INTERVAL_MINUTES,
+    DAILY_INTERVAL_MINUTES,
+    STOCK_PAPER_STRATEGIES,
+    activate_intraday_equity_paper,
     compare_equity_paper_account,
     extend_equity_paper_universe,
     refresh_equity_data,
     run_equity_backtests,
     start_equity_paper_account,
+    stock_paper_account_id,
     watch_equity_paper_account,
 )
 from .local_model import LocalOllamaAdvisor
 from .paper import PAPER_STRATEGY_NAMES, advance_paper_account, paper_summary, start_paper_account, watch_paper_account
 from .reports import paper_period_comparison, paper_trade_attribution
-from .simulator import Costs, Simulator
+from .simulator import Costs, Simulator, equal_weight_buy_and_hold
 from .storage import MarketStore
 from .strategies import STRATEGIES
 
@@ -61,8 +67,10 @@ def build_parser() -> argparse.ArgumentParser:
     backtest.add_argument("--cash", type=float, default=1000)
     backtest.add_argument("--fee-bps", type=float, default=26)
     backtest.add_argument("--slippage-bps", type=float, default=5)
-    backtest.add_argument("--max-position-fraction", type=float, default=0.25)
-    backtest.add_argument("--max-positions", type=int, default=4)
+    backtest.add_argument("--max-position-fraction", type=float, default=0.10)
+    backtest.add_argument("--max-positions", type=int, default=6)
+    backtest.add_argument("--test-fraction", type=float, default=0.30,
+                          help="Chronological out-of-sample fraction; strategy history before the split is warm-up only")
 
     paper = sub.add_parser("paper", help="Manage the persistent simulated account")
     paper_sub = paper.add_subparsers(dest="paper_action", required=True)
@@ -96,12 +104,13 @@ def build_parser() -> argparse.ArgumentParser:
     reset = paper_sub.add_parser("reset", help="Clear one or both paper accounts")
     reset.add_argument("--strategy", choices=PAPER_STRATEGY_NAMES)
 
-    stocks = sub.add_parser("stocks", help="Research and paper-trade US equities on daily bars")
+    stocks = sub.add_parser("stocks", help="Research and paper-trade US equities on daily or 15-minute bars")
     stocks.add_argument("--database", default="data/stocks_market_research.sqlite3", help="Separate stock research database")
     stock_sub = stocks.add_subparsers(dest="stocks_action", required=True)
-    stock_fetch = stock_sub.add_parser("fetch", help="Fetch public Yahoo Finance daily bars and corporate actions")
+    stock_fetch = stock_sub.add_parser("fetch", help="Fetch public Yahoo Finance bars and corporate actions")
     stock_fetch.add_argument("--symbols", nargs="+", default=list(DEFAULT_STOCK_SYMBOLS))
-    stock_fetch.add_argument("--period", default="5y", choices=["1y", "2y", "5y", "10y", "max"])
+    stock_fetch.add_argument("--interval", default="1d", choices=["1d", "15m"])
+    stock_fetch.add_argument("--period", choices=["1d", "5d", "10d", "1mo", "3mo", "1y", "2y", "5y", "10y", "max"])
     stock_backtest = stock_sub.add_parser("backtest", help="Compare daily stock-market baseline strategies")
     stock_backtest.add_argument("--symbols", nargs="+", default=list(DEFAULT_STOCK_SYMBOLS))
     stock_backtest.add_argument("--cash", type=float, default=1000)
@@ -109,6 +118,7 @@ def build_parser() -> argparse.ArgumentParser:
     stock_backtest.add_argument("--slippage-bps", type=float, default=5)
     stock_backtest.add_argument("--max-position-fraction", type=float, default=0.10)
     stock_backtest.add_argument("--max-positions", type=int, default=6)
+    stock_backtest.add_argument("--test-fraction", type=float, default=0.30)
     stocks_paper = stock_sub.add_parser("paper", help="Manage the separate stock paper account")
     stocks_paper_sub = stocks_paper.add_subparsers(dest="stocks_paper_action", required=True)
     stocks_start = stocks_paper_sub.add_parser("start", help="Create the forward-only stock paper account")
@@ -119,15 +129,29 @@ def build_parser() -> argparse.ArgumentParser:
     stocks_start.add_argument("--max-position-fraction", type=float, default=0.10)
     stocks_start.add_argument("--max-positions", type=int, default=6)
     stocks_start.add_argument("--model", default=LocalOllamaAdvisor.DEFAULT_MODEL)
+    stocks_start.add_argument("--strategy", choices=STOCK_PAPER_STRATEGIES, default="llama_regime")
+    stocks_start.add_argument("--interval", type=int, default=DAILY_INTERVAL_MINUTES,
+                              choices=[DAILY_INTERVAL_MINUTES, INTRADAY_INTERVAL_MINUTES])
     stocks_start.add_argument("--reset", action="store_true", help="Replace an existing stock paper account")
-    stocks_watch = stocks_paper_sub.add_parser("watch", help="Check once each US trading day after the close")
+    stocks_paper_sub.add_parser(
+        "intraday", help="Switch the existing stock paper ledger to 15-minute bars without resetting it",
+    )
+    stocks_watch = stocks_paper_sub.add_parser("watch", help="Watch completed 15-minute bars during US hours (or daily bars after close)")
     stocks_watch.add_argument("--poll-seconds", type=int, default=60)
+    stocks_watch.add_argument("--strategy", choices=STOCK_PAPER_STRATEGIES, default="llama_regime")
     stocks_watch.add_argument("--once", action="store_true")
-    stocks_paper_sub.add_parser("status", help="Show stock paper account P&L and positions")
-    stocks_paper_sub.add_parser("reset", help="Clear only the stock paper account").add_argument("--yes", action="store_true", help="Confirm clearing the separate stock account")
-    stocks_paper_sub.add_parser("compare", help="Compare stock paper results with SPY and fixed baselines")
-    stocks_add = stocks_paper_sub.add_parser("add-symbols", help="Add fetched tickers without resetting the active account")
+    stocks_status = stocks_paper_sub.add_parser("status", help="Show stock paper account P&L and positions")
+    stocks_status.add_argument("--strategy", choices=STOCK_PAPER_STRATEGIES, default="llama_regime")
+    stocks_reset = stocks_paper_sub.add_parser("reset", help="Clear only the stock paper account")
+    stocks_reset.add_argument("--yes", action="store_true", help="Confirm clearing the separate stock account")
+    stocks_reset.add_argument("--strategy", choices=STOCK_PAPER_STRATEGIES, default="llama_regime")
+    stock_compare = stocks_paper_sub.add_parser("compare", help="Compare stock paper results with SPY and fixed baselines")
+    stock_compare.add_argument("--strategy", choices=STOCK_PAPER_STRATEGIES, default="llama_regime")
+    stocks_add = stocks_paper_sub.add_parser(
+        "add-symbols", help="Add fetched tickers to the active account without resetting its history",
+    )
     stocks_add.add_argument("--symbols", nargs="+", required=True)
+    stocks_add.add_argument("--strategy", choices=STOCK_PAPER_STRATEGIES, default="llama_regime")
 
     regime = sub.add_parser("regime", help="Optional local Ollama market-regime annotation")
     regime.add_argument("pair")
@@ -199,19 +223,67 @@ def main(argv: list[str] | None = None) -> int:
                 data = {pair: bars for pair, bars in data.items() if is_crypto_usd_pair(pair)}
             if not data:
                 raise RuntimeError("No stored candles. Run fetch first.")
+            if not 0.1 <= args.test_fraction <= 0.5:
+                raise ValueError("Out-of-sample fraction must be between 0.10 and 0.50")
             simulator = Simulator(
                 initial_cash=args.cash,
                 costs=Costs(args.fee_bps, args.slippage_bps),
                 max_position_fraction=args.max_position_fraction,
                 max_positions=args.max_positions,
             )
+            timestamps = sorted({bar.timestamp for rows in data.values() for bar in rows})
+            split_index = int(len(timestamps) * (1 - args.test_fraction))
+            if split_index < 1 or split_index >= len(timestamps):
+                raise RuntimeError("Not enough distinct candle timestamps for a chronological split")
+            oos_start = timestamps[split_index]
+            training_end = timestamps[split_index - 1]
+
+            def compact(result):
+                row = result.to_dict()
+                row.pop("trades", None)
+                row.pop("equity_curve", None)
+                return row
+
             results = []
             for strategy in STRATEGIES.values():
-                result = simulator.run(data, strategy).to_dict()
-                result.pop("trades", None)
-                result.pop("equity_curve", None)
-                results.append(result)
-            print(json.dumps(results, indent=2, allow_nan=False))
+                training = simulator.run(data, strategy, through_timestamp=training_end)
+                out_of_sample = simulator.run(data, strategy, from_timestamp=oos_start)
+                results.append({
+                    "strategy": strategy.name,
+                    "training_period": compact(training),
+                    "out_of_sample": compact(out_of_sample),
+                })
+            benchmark = equal_weight_buy_and_hold(
+                data, args.cash, Costs(args.fee_bps, args.slippage_bps),
+                from_timestamp=oos_start,
+            )
+            print(json.dumps({
+                "market": "USD crypto",
+                "interval_minutes": args.interval,
+                "split": {
+                    "training_end_utc": datetime.fromtimestamp(training_end, timezone.utc).isoformat(),
+                    "out_of_sample_start_utc": datetime.fromtimestamp(oos_start, timezone.utc).isoformat(),
+                    "out_of_sample_fraction": args.test_fraction,
+                    "distinct_bars": len(timestamps),
+                },
+                "symbols": sorted(data),
+                "initial_cash": args.cash,
+                "costs_bps_per_side": {"fee": args.fee_bps, "slippage": args.slippage_bps},
+                "limits": {"max_position_fraction": args.max_position_fraction, "max_positions": args.max_positions},
+                "out_of_sample_benchmarks": [
+                    {"strategy": "cash", "ending_equity": args.cash, "pnl": 0.0,
+                     "return_pct": 0.0, "max_drawdown_pct": 0.0, "closed_trades": 0,
+                     "win_rate_pct": None, "profit_factor": None, "open_positions": 0},
+                    benchmark,
+                ],
+                "results": results,
+                "notes": [
+                    "The chronological test interval is untouched by the simulation; earlier candles are warm-up only.",
+                    "Strategy parameters are fixed in code and were not selected using these out-of-sample results.",
+                    "Equal-weight buy-and-hold invests all eligible symbols at their first test-period open and pays the same entry fee and slippage.",
+                    "The universe is the currently stored set, so the crypto results have selection and survivorship bias.",
+                ],
+            }, indent=2, allow_nan=False))
             return 0
 
         if args.command == "paper":
@@ -254,13 +326,17 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "stocks":
             if args.stocks_action == "fetch":
-                print(json.dumps(refresh_equity_data(store, args.symbols, period=args.period), indent=2, allow_nan=False))
+                interval_minutes = INTRADAY_INTERVAL_MINUTES if args.interval == "15m" else DAILY_INTERVAL_MINUTES
+                period = args.period or ("10d" if args.interval == "15m" else "5y")
+                print(json.dumps(refresh_equity_data(
+                    store, args.symbols, period=period, interval_minutes=interval_minutes,
+                ), indent=2, allow_nan=False))
             elif args.stocks_action == "backtest":
                 report = run_equity_backtests(
                     store, args.symbols, initial_cash=args.cash,
                     costs=Costs(args.fee_bps, args.slippage_bps),
                     max_position_fraction=args.max_position_fraction,
-                    max_positions=args.max_positions,
+                    max_positions=args.max_positions, test_fraction=args.test_fraction,
                 )
                 print(json.dumps(report, indent=2, allow_nan=False))
             elif args.stocks_action == "paper":
@@ -270,26 +346,30 @@ def main(argv: list[str] | None = None) -> int:
                         costs=Costs(args.fee_bps, args.slippage_bps),
                         max_position_fraction=args.max_position_fraction,
                         max_positions=args.max_positions, model=args.model, reset=args.reset,
+                        interval_minutes=args.interval,
+                        strategy_name=args.strategy,
                     )
                     print(json.dumps(paper_summary(state), indent=2, allow_nan=False))
+                elif args.stocks_paper_action == "intraday":
+                    print(json.dumps(activate_intraday_equity_paper(store), indent=2, allow_nan=False))
                 elif args.stocks_paper_action == "watch":
                     try:
-                        watch_equity_paper_account(store, args.poll_seconds, args.once)
+                        watch_equity_paper_account(store, args.poll_seconds, args.once, args.strategy)
                     except KeyboardInterrupt:
                         print("Stock paper watch stopped.")
                 elif args.stocks_paper_action == "status":
-                    state = store.get_paper_state(STOCK_PAPER_ACCOUNT_ID)
+                    state = store.get_paper_state(stock_paper_account_id(args.strategy))
                     if not state:
-                        raise RuntimeError("No stock paper account exists. Run stocks paper start first.")
+                        raise RuntimeError("No stock paper account exists. Run `stocks paper start` first.")
                     print(json.dumps(paper_summary(state), indent=2, allow_nan=False))
                 elif args.stocks_paper_action == "compare":
-                    print(json.dumps(compare_equity_paper_account(store), indent=2, allow_nan=False))
+                    print(json.dumps(compare_equity_paper_account(store, args.strategy), indent=2, allow_nan=False))
                 elif args.stocks_paper_action == "add-symbols":
-                    print(json.dumps(extend_equity_paper_universe(store, args.symbols), indent=2, allow_nan=False))
+                    print(json.dumps(extend_equity_paper_universe(store, args.symbols, args.strategy), indent=2, allow_nan=False))
                 else:
                     if not args.yes:
-                        raise ValueError("Pass --yes to confirm clearing the stock paper account")
-                    store.clear_paper_state(STOCK_PAPER_ACCOUNT_ID)
+                        raise ValueError("Pass `--yes` to confirm clearing the stock paper account")
+                    store.clear_paper_state(stock_paper_account_id(args.strategy))
                     print("Stock paper account cleared.")
             return 0
 

@@ -12,7 +12,7 @@ from .local_model import LocalOllamaAdvisor
 from .models import Candle
 from .kraken import fetch_ohlc, is_crypto_usd_pair
 from .simulator import Costs, Simulator
-from .strategies import STRATEGIES, Strategy
+from .strategies import STRATEGIES, Strategy, prepare_universe, should_remain_long
 from .storage import MarketStore
 
 
@@ -87,6 +87,12 @@ def advance_paper_account(
     state = store.get_paper_state(strategy_name)
     if not state or not state.get("active"):
         raise ValueError("No active paper account. Start one first.")
+    Simulator(
+        float(state.get("starting_cash", 1000.0)),
+        Costs(float(state.get("fee_bps", 26.0)), float(state.get("slippage_bps", 5.0))),
+        float(state.get("max_position_fraction", 0.10)),
+        int(state.get("max_positions", 6)),
+    )
     data = store.get_candles(int(state["interval"]), list(state["pairs"]))
     events: dict[int, list[tuple[str, int]]] = defaultdict(list)
     if not live_only:
@@ -136,6 +142,11 @@ def advance_paper_account(
         )
         if strategy_name == "llama_regime" else STRATEGIES[strategy_name]
     )
+    completed_histories = {
+        pair: [bar for bar in bars if bar.timestamp < timestamp]
+        for pair, bars in data.items()
+    }
+    prepare_universe(strategy, completed_histories, timestamp)
     fee_rate = float(state["fee_bps"]) / 10_000
     slip_rate = float(state["slippage_bps"]) / 10_000
     positions: dict[str, dict[str, Any]] = state["positions"]
@@ -147,10 +158,7 @@ def advance_paper_account(
         model_histories: dict[str, list[Candle]] = {}
         for pair, index in rows:
             history = data[pair][:index]
-            if pair in positions or (
-                strategy.trend.desired_long(history, currently_long=False)
-                or strategy.mean_reversion.desired_long(history, currently_long=False)
-            ):
+            if strategy.eligible_for_classification(history, currently_long=pair in positions):
                 model_histories[pair] = history
         strategy.prepare_batch(model_histories)
 
@@ -169,7 +177,7 @@ def advance_paper_account(
             continue
         if index >= len(data[pair]) and pair not in live_for_event:
             continue
-        if not strategy.desired_long(data[pair][:index], currently_long=True):
+        if not should_remain_long(strategy, data[pair][:index], position):
             base_price = live_for_event[pair] if pair in live_for_event else data[pair][index].open
             fill = base_price * (1 - slip_rate)
             proceeds = float(position["quantity"]) * fill * (1 - fee_rate)
@@ -192,10 +200,7 @@ def advance_paper_account(
         # Llama selects between these two deterministic baselines. If neither
         # baseline has an entry signal, its label cannot create an entry, so
         # skip an unnecessary local-model call for this pair.
-        if isinstance(strategy, LlamaRegimeSwitch) and not (
-            strategy.trend.desired_long(history, currently_long=False)
-            or strategy.mean_reversion.desired_long(history, currently_long=False)
-        ):
+        if isinstance(strategy, LlamaRegimeSwitch) and not strategy.eligible_for_classification(history, currently_long=False):
             continue
         if strategy.desired_long(history, currently_long=False):
             strength = strategy.entry_strength(history)
@@ -286,13 +291,15 @@ def paper_summary(state: dict[str, Any]) -> dict[str, Any]:
     equity = cash + sum(float(row["quantity"]) * float(marks.get(pair, row["entry_price"])) for pair, row in positions.items())
     start = float(state["starting_cash"])
     closed = state["closed_trades"]
+    trade_realized_pnl = sum(float(t["pnl"]) for t in closed)
+    dividend_income = float(state.get("dividend_income", 0.0))
     return {
         "active": state["active"], "strategy": state["strategy"], "model": state.get("model"), "cursor": state["cursor"],
         "starting_cash": start, "cash": cash, "equity": equity,
         "pnl": equity - start, "return_pct": (equity / start - 1) * 100,
-        "trade_realized_pnl": sum(float(t["pnl"]) for t in closed),
-        "dividend_income": float(state.get("dividend_income", 0.0)),
-        "realized_pnl": sum(float(t["pnl"]) for t in closed) + float(state.get("dividend_income", 0.0)),
+        "realized_pnl": trade_realized_pnl + dividend_income,
+        "trade_realized_pnl": trade_realized_pnl,
+        "dividend_income": dividend_income,
         "closed_trades": len(closed), "open_positions": open_positions,
         "trade_log": closed[-20:], "model_notes": state.get("model_notes", {}),
         "learning_stats": state.get("learning_stats", {

@@ -29,7 +29,8 @@ class LiveSnapshot:
     fetched_at: float
 
 
-PAPER_STRATEGY_NAMES = (*STRATEGIES.keys(), "llama_regime")
+PAPER_ACCOUNT_ENGINE_STRATEGIES = {"volatility_breakout_1h": "volatility_breakout"}
+PAPER_STRATEGY_NAMES = (*STRATEGIES.keys(), "llama_regime", *PAPER_ACCOUNT_ENGINE_STRATEGIES)
 LIVE_SNAPSHOT_MAX_SKEW_SECONDS = 30
 
 
@@ -41,6 +42,15 @@ def start_paper_account(
 ) -> dict[str, Any]:
     if strategy_name not in PAPER_STRATEGY_NAMES:
         raise ValueError(f"Unknown strategy: {strategy_name}")
+    account_id = strategy_name
+    engine_strategy = PAPER_ACCOUNT_ENGINE_STRATEGIES.get(account_id, account_id)
+    if account_id == "volatility_breakout_1h" and interval != 60:
+        raise ValueError("The volatility_breakout_1h account must use 60-minute candles.")
+    if store.get_paper_state(account_id) is not None:
+        raise ValueError(
+            f"Paper account {account_id} already has saved state; it was left untouched. "
+            "Use its status/watch commands to resume it."
+        )
     bars = store.get_candles(interval, pairs)
     if pairs:
         invalid = [pair for pair in pairs if not is_crypto_usd_pair(pair)]
@@ -60,8 +70,10 @@ def start_paper_account(
         "active": True,
         "interval": interval,
         "pairs": [pair.upper() for pair in bars],
-        "strategy": strategy_name,
-        "model": model if strategy_name == "llama_regime" else None,
+        "strategy": engine_strategy,
+        "engine_strategy": engine_strategy,
+        "account_id": account_id,
+        "model": model if engine_strategy == "llama_regime" else None,
         "starting_cash": starting_cash,
         "cash": starting_cash,
         "fee_bps": costs.fee_bps,
@@ -75,18 +87,18 @@ def start_paper_account(
         "equity_curve": [],
         "last_marks": {},
     }
-    store.save_paper_state(state, strategy_name)
+    store.save_paper_state(state, account_id)
     return state
 
 
 def advance_paper_account(
-    store: MarketStore, strategy_name: str,
+    store: MarketStore, account_id: str,
     live_ticks: dict[str, LiveSnapshot] | None = None,
     *, live_only: bool = False,
 ) -> dict[str, Any]:
-    state = store.get_paper_state(strategy_name)
+    state = store.get_paper_state(account_id)
     if not state or not state.get("active"):
-        raise ValueError("No active paper account. Start one first.")
+        raise ValueError(f"No active {account_id} paper account. Start one first.")
     Simulator(
         float(state.get("starting_cash", 1000.0)),
         Costs(float(state.get("fee_bps", 26.0)), float(state.get("slippage_bps", 5.0))),
@@ -127,20 +139,20 @@ def advance_paper_account(
         and live_ticks[pair].candle_timestamp == timestamp
         and index == len(data.get(pair, []))
     }
-    strategy_name = str(state["strategy"])
+    engine_strategy = str(state.get("engine_strategy") or state["strategy"])
     learning_feedback: dict[str, Any] | None = None
-    if strategy_name == "llama_regime":
+    if engine_strategy == "llama_regime":
         store.resolve_ai_observations(
-            strategy_name, data, timestamp, int(state["interval"]),
+            account_id, data, timestamp, int(state["interval"]),
             float(state["fee_bps"]), float(state["slippage_bps"]),
         )
-        learning_feedback = store.get_ai_feedback(strategy_name, timestamp)
+        learning_feedback = store.get_ai_feedback(account_id, timestamp)
     strategy: Strategy = (
         LlamaRegimeSwitch(
             str(state.get("model") or LocalOllamaAdvisor.DEFAULT_MODEL),
             learning_feedback=learning_feedback,
         )
-        if strategy_name == "llama_regime" else STRATEGIES[strategy_name]
+        if engine_strategy == "llama_regime" else STRATEGIES[engine_strategy]
     )
     completed_histories = {
         pair: [bar for bar in bars if bar.timestamp < timestamp]
@@ -270,10 +282,10 @@ def advance_paper_account(
             for pair, note in notes.items()
             if "decision_timestamp" in note and "decision_close" in note
         ]
-        store.record_ai_observations(strategy_name, observations)
-        state["learning_stats"] = store.get_ai_feedback(strategy_name, timestamp)
+        store.record_ai_observations(account_id, observations)
+        state["learning_stats"] = store.get_ai_feedback(account_id, timestamp)
     state["equity_curve"].append({"timestamp": timestamp, "equity": equity})
-    store.save_paper_state(state, strategy_name)
+    store.save_paper_state(state, account_id)
     return paper_summary(state)
 
 
@@ -294,7 +306,9 @@ def paper_summary(state: dict[str, Any]) -> dict[str, Any]:
     trade_realized_pnl = sum(float(t["pnl"]) for t in closed)
     dividend_income = float(state.get("dividend_income", 0.0))
     return {
-        "active": state["active"], "strategy": state["strategy"], "model": state.get("model"), "cursor": state["cursor"],
+        "active": state["active"], "strategy": state.get("account_id", state["strategy"]),
+        "engine_strategy": state.get("engine_strategy", state["strategy"]),
+        "interval": int(state.get("interval", 0)), "model": state.get("model"), "cursor": state["cursor"],
         "starting_cash": start, "cash": cash, "equity": equity,
         "pnl": equity - start, "return_pct": (equity / start - 1) * 100,
         "realized_pnl": trade_realized_pnl + dividend_income,
@@ -411,3 +425,4 @@ def watch_paper_account(
         if once:
             return
         time.sleep(poll_seconds)
+
